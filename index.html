@@ -2738,11 +2738,33 @@ document.querySelectorAll('.sort-btn[data-sort]').forEach(btn => {
 // ── MODAL ──────────────────────────────────────────────────────────
 const detailCache = {};
 
+// ── Anonymous engagement events (GA) ──
+// Captures what people click and at what rank, so we can tell popularity-seeking
+// (clicks cluster at top ranks) from genuine discovery (clicks spread down the
+// list). No personal data — just action, title id, and its rank in the list.
+function gaTrack(action, item, extra) {
+  try {
+    if (typeof gtag !== 'function') return;
+    let rank = null;
+    if (item && Array.isArray(allItems)) {
+      const i = allItems.findIndex(x => x.id === item.id && x.media_type === item.media_type);
+      if (i >= 0) rank = i + 1;
+    }
+    gtag('event', action, Object.assign({
+      tmdb_id: item ? item.id : undefined,
+      media_type: item ? item.media_type : undefined,
+      rank: rank,
+      pulse_score: (item && item._pulseScore != null) ? Math.round(item._pulseScore * 10) / 10 : undefined
+    }, extra || {}));
+  } catch(_) {}
+}
+
 async function openModal(item) {
   const overlay = document.getElementById('modal-overlay');
   const modalContent = document.getElementById('modal-content');
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  gaTrack('title_open', item);
 
   // Update URL for bookmarking/sharing
   try {
@@ -2958,6 +2980,7 @@ async function shareTitle(id, type, title) {
   const item = allItems.find(i => i.id === id && i.media_type === type);
   const rank = item ? allItems.indexOf(item) + 1 : null;
   const pulse = item?._pulseScore?.toFixed(1);
+  gaTrack('title_share', item);
   // /share/movie/12345 — serves per-title OG to bots, redirects humans to /?t=movie-12345
   const url = `${window.location.origin}/share/${type}/${id}`;
   const text = rank
@@ -3606,6 +3629,7 @@ function clearSearch() {
 function openRandomTitle() {
   if (allItems.length === 0) return;
   const item = allItems[Math.floor(Math.random() * allItems.length)];
+  gaTrack('random_pick', item);
   openModal(item);
 }
 
