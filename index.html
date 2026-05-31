@@ -12,8 +12,8 @@
 <meta property="og:site_name" content="EPHIX PULSE">
 <meta property="og:title" content="EPHIX PULSE — What the World is Watching">
 <meta property="og:description" content="Live TV & movie trending, scored across five sources into a single Pulse Score. See what the world is watching right now.">
-<meta property="og:url" content="https://www.ephix.net">
-<meta property="og:image" content="https://www.ephix.net/api/og">
+<meta property="og:url" content="https://ephix.net">
+<meta property="og:image" content="https://ephix.net/api/og">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 
@@ -21,9 +21,10 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="EPHIX PULSE — What the World is Watching">
 <meta name="twitter:description" content="Live TV & movie trending, scored across five sources into a single Pulse Score.">
-<meta name="twitter:image" content="https://www.ephix.net/api/og">
+<meta name="twitter:image" content="https://ephix.net/api/og">
 
 <meta name="theme-color" content="#2196F3">
+<link rel="canonical" href="https://ephix.net">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
@@ -2022,6 +2023,15 @@ async function startLoad() {
     setStep('tmdb', 'loading');
     const tmdbItems = await fetchTMDB();
     setStep('tmdb', 'done');
+
+    // ── Progressive paint ──
+    // Show real tiles from TMDB right away so the user sees content immediately
+    // instead of skeletons. The sources bar + "Merging" keep flashing below;
+    // the full merge further down re-renders these tiles with final Pulse
+    // scores and only then hides the bar.
+    allItems = mergeAndScore(tmdbItems, {}, {}, {}, { trakt: 'fail', youtube: 'fail', wikipedia: 'fail' });
+    applyViewMode();
+    renderGrid();
 
     // ── Fire Trakt, YouTube, Wiki all in parallel ──
     setStep('trakt',   'loading');
