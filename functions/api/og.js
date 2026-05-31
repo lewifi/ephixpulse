@@ -1,33 +1,29 @@
-// functions/api/og.js — Cloudflare PAGES FUNCTION  (route: /api/og) 
+// functions/api/og.js — Cloudflare PAGES FUNCTION
 //
-// IMPORTANT: this is a Pages Function. Its entry point is `onRequest`, NOT a
-// Worker-style `export default { fetch }`. Do not convert it to a Worker handler
-// and do not append code below — keep this as one clean file (appending caused
-// the "duplicate symbol / React already declared" errors in the Worker attempt).
+// Routes:
+//   /api/og                       → homepage card        (this file's onRequest)
+//   /api/og/movie/12345           → movie card           (functions/api/og/[type]/[id].js
+//   /api/og/tv/12345              → TV card                imports renderOG from here)
+//   /api/og?type=movie&id=12345   → still works (legacy query form, kept for any
+//                                    URLs Facebook/Discord already cached)
 //
-// Lean by design, to stay under Cloudflare's per-request resource limit (the
-// 1102 error). The rules that keep it under the ceiling:
-//   • ONE poster image fetched per request, inlined as a data URI (so the
-//     renderer never makes its own remote image fetches — a known 1102 cause).
-//   • Homepage card reuses that single poster three times. No multi-poster fetch.
-//   • Two small fonts only (Bebas Neue for display, DM Sans for body).
-//   • No in-memory PNG cache. Caching is done at the edge via Cache-Control.
+// Pages Function: entry is `onRequest`, NOT a Worker `export default { fetch }`.
+// Keep as one clean file — do not append code below.
 //
-// Modes:
-//   /api/og                      → homepage card (today's #1)
-//   /api/og?type=movie&id=12345  → movie card
-//   /api/og?type=tv&id=12345     → TV card
+// Lean by design to stay under Cloudflare's per-request resource limit (1102):
+// ONE poster fetched per request and inlined as a data URI (no remote image
+// fetches inside the renderer), two small fonts, no in-memory PNG cache (the
+// edge caches via Cache-Control).
 
 import React from 'react';
 import { ImageResponse } from 'workers-og';
 
 const TMDB = 'https://api.themoviedb.org/3';
-const POSTER = 'https://image.tmdb.org/t/p/w342'; // smaller size = lighter render
+const POSTER = 'https://image.tmdb.org/t/p/w342';
 
 const BEBAS_URL  = 'https://cdn.jsdelivr.net/fontsource/fonts/bebas-neue@latest/latin-400-normal.ttf';
 const DMSANS_URL = 'https://cdn.jsdelivr.net/fontsource/fonts/dm-sans@latest/latin-400-normal.ttf';
 
-// Font bytes are small and constant; cache them across warm invocations.
 let FONTS = null;
 async function loadFonts() {
   if (FONTS) return FONTS;
@@ -52,7 +48,6 @@ function base64FromBuffer(arrayBuffer) {
   return btoa(binary);
 }
 
-// Fetch a single poster and inline it. Returns null if unavailable.
 async function posterDataUri(posterPath) {
   if (!posterPath) return null;
   try {
@@ -72,6 +67,7 @@ function truncate(s, n) {
 
 const BG = {
   width: '1200px', height: '630px', display: 'flex', color: '#ffffff',
+  overflow: 'hidden',                                   // clips the bleeding posters
   backgroundColor: '#080a0f',
   backgroundImage: 'linear-gradient(135deg, #080a0f 0%, #0a1424 100%)',
   fontFamily: 'DM Sans',
@@ -81,43 +77,50 @@ function posterBox(h, uri, w, ht, key) {
   return h('div', {
     key,
     style: {
-      width: `${w}px`, height: `${ht}px`, borderRadius: '10px', overflow: 'hidden',
+      width: `${w}px`, height: `${ht}px`, borderRadius: '12px', overflow: 'hidden',
       backgroundColor: '#13182a', display: 'flex',
       border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0,
     },
   }, uri ? [h('img', { key: 'i', src: uri, width: w, height: ht, style: { objectFit: 'cover' } })] : []);
 }
 
-// ─── HOMEPAGE CARD: one poster, shown three times ────────────────
+// ─── HOMEPAGE CARD ───────────────────────────────────────────────
+// One poster, shown three times. Middle is the hero; the stack is taller than
+// the card and vertically centred, so the top and bottom posters bleed off the
+// edges and get clipped.
 function renderHomeCard(h, top, uri) {
   const title = truncate(top.title || top.name || 'EPHIX PULSE', 26);
   const year = (top.release_date || top.first_air_date || '').slice(0, 4);
 
-  return h('div', { style: { ...BG, padding: '60px' } }, [
+  return h('div', { style: BG }, [
     h('div', {
       key: 'left',
-      style: { display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' },
+      style: {
+        width: '360px', height: '630px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '16px',
+        paddingLeft: '55px', flexShrink: 0,
+      },
     }, [
-      posterBox(h, uri, 150, 225, 'p1'),
-      posterBox(h, uri, 150, 225, 'p2'),
-      posterBox(h, uri, 150, 225, 'p3'),
+      posterBox(h, uri, 215, 323, 'p1'),   // top — clipped
+      posterBox(h, uri, 250, 375, 'p2'),   // hero — full
+      posterBox(h, uri, 215, 323, 'p3'),   // bottom — clipped
     ]),
 
     h('div', {
       key: 'div',
-      style: { display: 'flex', width: '1px', backgroundColor: 'rgba(33,150,243,0.2)', margin: '40px 50px' },
+      style: { display: 'flex', width: '1px', backgroundColor: 'rgba(33,150,243,0.2)', margin: '60px 45px' },
     }),
 
     h('div', {
       key: 'right',
       style: {
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        flex: 1, paddingTop: '20px', paddingBottom: '20px',
+        flex: 1, padding: '60px 60px 60px 0',
       },
     }, [
       h('div', { key: 'top', style: { display: 'flex', flexDirection: 'column' } }, [
         h('div', { key: 'l', style: { fontSize: '20px', color: '#2196F3', letterSpacing: '6px', marginBottom: '24px' } }, 'LIVE TOP 100 · WORLDWIDE'),
-        h('div', { key: 'h', style: { fontSize: '62px', fontWeight: 700, lineHeight: 1.05, letterSpacing: '-1px', display: 'flex', flexDirection: 'column' } }, [
+        h('div', { key: 'h', style: { fontSize: '60px', fontWeight: 700, lineHeight: 1.05, letterSpacing: '-1px', display: 'flex', flexDirection: 'column' } }, [
           h('span', { key: 'a' }, 'What the World'),
           h('span', { key: 'b' }, 'is Watching'),
         ]),
@@ -135,7 +138,7 @@ function renderHomeCard(h, top, uri) {
   ]);
 }
 
-// ─── PER-TITLE CARD: one poster ──────────────────────────────────
+// ─── PER-TITLE CARD ──────────────────────────────────────────────
 function renderTitleCard(h, detail, type, uri) {
   const title = truncate(detail.title || detail.name || 'Untitled', 38);
   const year = (detail.release_date || detail.first_air_date || '').slice(0, 4);
@@ -169,14 +172,12 @@ function renderTitleCard(h, detail, type, uri) {
   ]);
 }
 
-export async function onRequest(context) {
-  const { request, env } = context;
+// Shared renderer used by BOTH /api/og and /api/og/<type>/<id>.
+export async function renderOG(context, rawType, rawId) {
+  const { env } = context;
   try {
-    const url = new URL(request.url);
-    const rawType = url.searchParams.get('type');
-    const rawId = url.searchParams.get('id');
     const type = rawType === 'movie' || rawType === 'tv' ? rawType : null;
-    const id = rawId && /^\d+$/.test(rawId) ? rawId : null;
+    const id = rawId && /^\d+$/.test(String(rawId)) ? String(rawId) : null;
 
     const key = env.TMDB_KEY;
     if (!key) {
@@ -195,21 +196,13 @@ export async function onRequest(context) {
         const uri = await posterDataUri(detail.poster_path);
         root = renderTitleCard(h, detail, type, uri);
       } else {
-        const data = await fetch(`${TMDB}/trending/all/day?api_key=${key}`).then(r => r.json());
-        const top = (data.results || [])[0] || {};
-        const uri = await posterDataUri(top.poster_path);
-        root = renderHomeCard(h, top, uri);
+        root = await homeRoot(h, key);
       }
     } else {
-      const data = await fetch(`${TMDB}/trending/all/day?api_key=${key}`).then(r => r.json());
-      const top = (data.results || [])[0] || {};
-      const uri = await posterDataUri(top.poster_path);
-      root = renderHomeCard(h, top, uri);
+      root = await homeRoot(h, key);
     }
 
     const image = new ImageResponse(root, { width: 1200, height: 630, fonts });
-
-    // Re-stream with cache headers so the edge caches it (the real caching layer).
     return new Response(image.body, {
       status: 200,
       headers: {
@@ -222,4 +215,17 @@ export async function onRequest(context) {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
+}
+
+async function homeRoot(h, key) {
+  const data = await fetch(`${TMDB}/trending/all/day?api_key=${key}`).then(r => r.json());
+  const top = (data.results || [])[0] || {};
+  const uri = await posterDataUri(top.poster_path);
+  return renderHomeCard(h, top, uri);
+}
+
+// /api/og (homepage) — also honours the legacy ?type=&id= query form.
+export async function onRequest(context) {
+  const url = new URL(context.request.url);
+  return renderOG(context, url.searchParams.get('type'), url.searchParams.get('id'));
 }
