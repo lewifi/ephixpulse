@@ -4,7 +4,7 @@
 
 const API = 'https://api.football-data.org/v4';
 const COMP = 'WC'; // football-data.org code for the FIFA World Cup
-const CACHE_SECONDS = 3 * 60 * 60; // 3 hours at the edge
+const CACHE_SECONDS = 15 * 60; // 15 min at the edge — finished scores show shortly after full time
 
 async function fdFetch(path, token) {
   const res = await fetch(`${API}${path}`, {
