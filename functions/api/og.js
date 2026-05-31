@@ -1,4 +1,4 @@
-// functions/api/og.js — Cloudflare PAGES FUNCTION  (route: /api/og)
+// functions/api/og.js — Cloudflare PAGES FUNCTION  (route: /api/og) 
 //
 // IMPORTANT: this is a Pages Function. Its entry point is `onRequest`, NOT a
 // Worker-style `export default { fetch }`. Do not convert it to a Worker handler
