@@ -65,6 +65,10 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
+// Gold star drawn as an inline SVG image — the DM Sans subset has no ★ glyph,
+// so a typed star renders as nothing. This needs no font and no network fetch.
+const STAR_URI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjYzlhNTQ4Ij48cGF0aCBkPSJNMTIgMTcuMjdMMTguMTggMjFsLTEuNjQtNy4wM0wyMiA5LjI0bC03LjE5LS42MUwxMiAyIDkuMTkgOC42MyAyIDkuMjRsNS40NiA0LjczTDUuODIgMjF6Ii8+PC9zdmc+';
+
 const BG = {
   width: '1200px', height: '630px', display: 'flex', color: '#ffffff',
   overflow: 'hidden',                                   // clips the bleeding posters
@@ -159,7 +163,10 @@ function renderTitleCard(h, detail, type, uri) {
         h('div', { key: 't', style: { fontFamily: 'Bebas Neue', fontSize: title.length > 22 ? '64px' : '78px', letterSpacing: '2px', lineHeight: 1, marginBottom: '14px' } }, title),
         h('div', { key: 'm', style: { fontSize: '17px', color: 'rgba(255,255,255,0.55)', display: 'flex', gap: '14px', marginBottom: '18px' } }, [
           year ? h('span', { key: 'y' }, year) : null,
-          rating ? h('span', { key: 'r', style: { color: '#c9a548' } }, `★ ${rating}`) : null,
+          rating ? h('div', { key: 'r', style: { display: 'flex', alignItems: 'center', gap: '5px', color: '#c9a548' } }, [
+            h('img', { key: 's', src: STAR_URI, width: 19, height: 19 }),
+            h('span', { key: 'n' }, rating),
+          ]) : null,
           genres ? h('span', { key: 'g' }, genres) : null,
         ].filter(Boolean)),
         overview ? h('div', { key: 'o', style: { fontSize: '16px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, display: 'flex' } }, overview) : null,
