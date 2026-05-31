@@ -477,14 +477,14 @@ header {
 
 #count-badge    { font-size: 12px; color: var(--muted); }
 #last-updated   {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: color 0.3s;
 }
+.live-sep { color: var(--muted); opacity: 0.45; font-size: 11px; }
 #last-updated.flash { color: var(--accent3); }
 .refresh-countdown {
   font-size: 11px;
@@ -1762,6 +1762,8 @@ footer a:hover { color: var(--text); }
   <div class="live-indicator">
     <div class="live-dot"></div>
     <span class="live-label">Live</span>
+    <span class="live-sep">·</span>
+    <span id="last-updated"></span>
   </div>
 </header>
 
@@ -1902,7 +1904,6 @@ footer a:hover { color: var(--text); }
     </svg>
   </button>
   <span id="count-badge"></span>
-  <span id="last-updated"></span>
 </div>
 
 
@@ -3095,6 +3096,12 @@ function updateCountdown() {
     ? `next in ${mins}:${secs.toString().padStart(2, '0')}`
     : 'refreshing…';
   el.innerHTML = `<span>Updated ${updated}</span><span class="refresh-countdown">${countdownStr}</span>`;
+
+  // When the countdown reaches zero, actually trigger the refresh — the display
+  // and the action are now the same mechanism. Guarded so it fires once.
+  if (remaining === 0 && !isRefreshing && !document.hidden) {
+    backgroundRefresh();
+  }
 }
 
 function announceRefresh() {
@@ -3265,8 +3272,15 @@ let refreshTimer = null;
 let isRefreshing = false;
 
 function startAutoRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(backgroundRefresh, AUTO_REFRESH_INTERVAL);
+  // The refresh is now driven by the countdown reaching zero (see
+  // updateCountdown), so no separate interval is needed — that decoupling was
+  // why it could sit on "refreshing…" without ever refreshing. We only need to
+  // catch up when the tab becomes visible again after a refresh fell due while
+  // it was hidden.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || isRefreshing) return;
+    if (Date.now() - lastRefreshTime >= AUTO_REFRESH_INTERVAL) backgroundRefresh();
+  });
 }
 
 async function backgroundRefresh() {
@@ -3313,6 +3327,8 @@ async function backgroundRefresh() {
     announceRefresh();
   } catch(err) {
     console.warn('[AutoRefresh] failed (non-fatal):', err.message);
+    lastRefreshTime = Date.now();   // back off a full interval; don't hammer every second
+    updateCountdown();
   } finally {
     isRefreshing = false;
   }
