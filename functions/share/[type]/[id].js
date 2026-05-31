@@ -55,9 +55,9 @@ export async function onRequest(context) {
 
   const ogTitle = `${title}${year ? ` (${year})` : ''} — Trending on EPHIX PULSE`;
   const ogDesc = overview || `${title} is currently trending on EPHIX PULSE — see what the world is watching right now.`;
-  const ogImage = `https://www.ephix.net/api/og/${type}/${id}`;
-  const shareUrl = `https://www.ephix.net/share/${type}/${id}`;
-  const siteUrl = `https://www.ephix.net/?t=${type}-${id}`;
+  const ogImage = `https://ephix.net/api/og/${type}/${id}`;
+  const shareUrl = `https://ephix.net/share/${type}/${id}`;
+  const siteUrl = `https://ephix.net/?t=${type}-${id}`;
 
   const ua = request.headers.get('user-agent') || '';
 
