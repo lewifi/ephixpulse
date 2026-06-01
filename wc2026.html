@@ -308,7 +308,7 @@ var MATCHES = [
   {date:'2026-06-14',etH:13,etM:0,teams:'Germany vs Curaçao',group:'E',venue:'Houston',stage:'Group Stage'},
   {date:'2026-06-14',etH:16,etM:0,teams:'Netherlands vs Japan',group:'F',venue:'Dallas',stage:'Group Stage'},
   {date:'2026-06-14',etH:19,etM:0,teams:'Ivory Coast vs Ecuador',group:'E',venue:'Philadelphia',stage:'Group Stage'},
-  {date:'2026-06-15',etH:0,etM:0,teams:'Tunisia vs Sweden',group:'F',venue:'Monterrey',stage:'Group Stage'},
+  {date:'2026-06-14',etH:22,etM:0,teams:'Tunisia vs Sweden',group:'F',venue:'Monterrey',stage:'Group Stage'},
   {date:'2026-06-15',etH:12,etM:0,teams:'Spain vs Cape Verde',group:'H',venue:'Atlanta',stage:'Group Stage'},
   {date:'2026-06-15',etH:15,etM:0,teams:'Belgium vs Egypt',group:'G',venue:'Seattle',stage:'Group Stage'},
   {date:'2026-06-15',etH:18,etM:0,teams:'Saudi Arabia vs Uruguay',group:'H',venue:'Miami',stage:'Group Stage'},
@@ -327,8 +327,8 @@ var MATCHES = [
   {date:'2026-06-18',etH:21,etM:0,teams:'Mexico vs South Korea',group:'A',venue:'Guadalajara',stage:'Group Stage'},
   {date:'2026-06-19',etH:15,etM:0,teams:'USA vs Australia',group:'D',venue:'Seattle',stage:'Group Stage'},
   {date:'2026-06-19',etH:18,etM:0,teams:'Scotland vs Morocco',group:'C',venue:'Boston',stage:'Group Stage'},
-  {date:'2026-06-19',etH:21,etM:0,teams:'Brazil vs Haiti',group:'C',venue:'Philadelphia',stage:'Group Stage'},
-  {date:'2026-06-20',etH:0,etM:0,teams:'Paraguay vs Türkiye',group:'D',venue:'San Francisco',stage:'Group Stage'},
+  {date:'2026-06-19',etH:20,etM:30,teams:'Brazil vs Haiti',group:'C',venue:'Philadelphia',stage:'Group Stage'},
+  {date:'2026-06-19',etH:23,etM:0,teams:'Paraguay vs Türkiye',group:'D',venue:'San Francisco',stage:'Group Stage'},
   {date:'2026-06-20',etH:13,etM:0,teams:'Netherlands vs Sweden',group:'F',venue:'Houston',stage:'Group Stage'},
   {date:'2026-06-20',etH:16,etM:0,teams:'Germany vs Ivory Coast',group:'E',venue:'Toronto',stage:'Group Stage'},
   {date:'2026-06-20',etH:20,etM:0,teams:'Ecuador vs Curaçao',group:'E',venue:'Kansas City',stage:'Group Stage'},
@@ -340,7 +340,7 @@ var MATCHES = [
   {date:'2026-06-22',etH:13,etM:0,teams:'Argentina vs Austria',group:'J',venue:'Dallas',stage:'Group Stage'},
   {date:'2026-06-22',etH:17,etM:0,teams:'France vs Iraq',group:'I',venue:'Philadelphia',stage:'Group Stage'},
   {date:'2026-06-22',etH:20,etM:0,teams:'Norway vs Senegal',group:'I',venue:'New York/NJ',stage:'Group Stage'},
-  {date:'2026-06-23',etH:0,etM:0,teams:'Jordan vs Algeria',group:'J',venue:'San Francisco',stage:'Group Stage'},
+  {date:'2026-06-22',etH:23,etM:0,teams:'Jordan vs Algeria',group:'J',venue:'San Francisco',stage:'Group Stage'},
   {date:'2026-06-23',etH:13,etM:0,teams:'Portugal vs Uzbekistan',group:'K',venue:'Houston',stage:'Group Stage'},
   {date:'2026-06-23',etH:16,etM:0,teams:'England vs Ghana',group:'L',venue:'Boston',stage:'Group Stage'},
   {date:'2026-06-23',etH:19,etM:0,teams:'Panama vs Croatia',group:'L',venue:'Toronto',stage:'Group Stage'},
@@ -361,8 +361,8 @@ var MATCHES = [
   {date:'2026-06-26',etH:15,etM:0,teams:'Senegal vs Iraq',group:'I',venue:'Toronto',stage:'Group Stage'},
   {date:'2026-06-26',etH:20,etM:0,teams:'Uruguay vs Spain',group:'H',venue:'Guadalajara',stage:'Group Stage'},
   {date:'2026-06-26',etH:20,etM:0,teams:'Cape Verde vs Saudi Arabia',group:'H',venue:'Houston',stage:'Group Stage'},
-  {date:'2026-06-27',etH:0,etM:0,teams:'New Zealand vs Belgium',group:'G',venue:'Vancouver',stage:'Group Stage'},
-  {date:'2026-06-27',etH:0,etM:0,teams:'Egypt vs Iran',group:'G',venue:'Seattle',stage:'Group Stage'},
+  {date:'2026-06-26',etH:23,etM:0,teams:'New Zealand vs Belgium',group:'G',venue:'Vancouver',stage:'Group Stage'},
+  {date:'2026-06-26',etH:23,etM:0,teams:'Egypt vs Iran',group:'G',venue:'Seattle',stage:'Group Stage'},
   {date:'2026-06-27',etH:17,etM:0,teams:'Panama vs England',group:'L',venue:'New York/NJ',stage:'Group Stage'},
   {date:'2026-06-27',etH:17,etM:0,teams:'Croatia vs Ghana',group:'L',venue:'Philadelphia',stage:'Group Stage'},
   {date:'2026-06-27',etH:19,etM:30,teams:'Colombia vs Portugal',group:'K',venue:'Miami',stage:'Group Stage'},
@@ -539,19 +539,8 @@ if (state.tz === null) state.tz = autoTz();
 var LIVE = null;
 
 /* ---------- HELPERS ---------- */
-function getUTC(m){
-  var vtz = VENUE_TZ[m.venue];
-
-  // fallback to EDT if venue missing
-  var offset = vtz ? vtz.o : -4;
-
-  var d = new Date(m.date + 'T00:00:00Z');
-
-  // convert venue-local time to UTC
-  d.setUTCHours(m.etH - offset, m.etM, 0, 0);
-
-  return d;
-}function toLocal(utc, o){ return new Date(utc.getTime() + o * 3600000); }
+function getUTC(m){ var d = new Date(m.date + 'T00:00:00Z'); d.setUTCHours(m.etH + 4, m.etM, 0, 0); return d; }
+function toLocal(utc, o){ return new Date(utc.getTime() + o * 3600000); }
 function pad(n){ return (n < 10 ? '0' : '') + n; }
 function fmtTime(d){ var h = d.getUTCHours(), mn = d.getUTCMinutes(); var ap = h >= 12 ? 'PM' : 'AM'; return (h % 12 || 12) + ':' + pad(mn) + ' ' + ap; }
 function fmtDate(d){
