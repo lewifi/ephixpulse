@@ -85,12 +85,17 @@ function posterBox(h, uri, w, ht, key) {
 }
 
 // ─── HOMEPAGE CARD ───────────────────────────────────────────────
-// One poster, shown three times. Middle is the hero; the stack is taller than
-// the card and vertically centred, so the top and bottom posters bleed off the
-// edges and get clipped.
-function renderHomeCard(h, top, uri) {
-  const title = truncate(top.title || top.name || 'EPHIX PULSE', 26);
-  const year = (top.release_date || top.first_air_date || '').slice(0, 4);
+// Top 3 trending as three different posters. The middle is #1 (the hero),
+// enlarged; #2 (top) and #3 (bottom) are smaller and bleed off the card edges
+// (the stack is taller than the card and vertically centred, clipped by overflow).
+function renderHomeCard(h, items, uris) {
+  const top1 = items[0] || {};
+  const title = truncate(top1.title || top1.name || 'EPHIX PULSE', 26);
+  const year = (top1.release_date || top1.first_air_date || '').slice(0, 4);
+
+  const heroUri = uris[0] || null;             // #1 — hero, centred
+  const topUri  = uris[1] || uris[0] || null;  // #2 — top, clipped
+  const botUri  = uris[2] || uris[0] || null;  // #3 — bottom, clipped
 
   return h('div', { style: BG }, [
     h('div', {
@@ -101,9 +106,9 @@ function renderHomeCard(h, top, uri) {
         paddingLeft: '55px', flexShrink: 0,
       },
     }, [
-      posterBox(h, uri, 215, 323, 'p1'),   // top — clipped
-      posterBox(h, uri, 250, 375, 'p2'),   // hero — full
-      posterBox(h, uri, 215, 323, 'p3'),   // bottom — clipped
+      posterBox(h, topUri, 215, 323, 'p1'),    // #2 — clipped
+      posterBox(h, heroUri, 250, 375, 'p2'),   // #1 — hero, full
+      posterBox(h, botUri, 215, 323, 'p3'),    // #3 — clipped
     ]),
 
     h('div', {
@@ -217,9 +222,9 @@ export async function renderOG(context, rawType, rawId) {
 
 async function homeRoot(h, key) {
   const data = await fetch(`${TMDB}/trending/all/day?api_key=${key}`).then(r => r.json());
-  const top = (data.results || [])[0] || {};
-  const uri = await posterDataUri(top.poster_path);
-  return renderHomeCard(h, top, uri);
+  const items = (data.results || []).slice(0, 3);
+  const uris = await Promise.all(items.map(it => posterDataUri(it.poster_path)));
+  return renderHomeCard(h, items, uris);
 }
 
 // /api/og (homepage) — also honours the legacy ?type=&id= query form.
