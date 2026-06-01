@@ -539,8 +539,19 @@ if (state.tz === null) state.tz = autoTz();
 var LIVE = null;
 
 /* ---------- HELPERS ---------- */
-function getUTC(m){ var d = new Date(m.date + 'T00:00:00Z'); d.setUTCHours(m.etH + 4, m.etM, 0, 0); return d; }
-function toLocal(utc, o){ return new Date(utc.getTime() + o * 3600000); }
+function getUTC(m){
+  var vtz = VENUE_TZ[m.venue];
+
+  // fallback to EDT if venue missing
+  var offset = vtz ? vtz.o : -4;
+
+  var d = new Date(m.date + 'T00:00:00Z');
+
+  // convert venue-local time to UTC
+  d.setUTCHours(m.etH - offset, m.etM, 0, 0);
+
+  return d;
+}function toLocal(utc, o){ return new Date(utc.getTime() + o * 3600000); }
 function pad(n){ return (n < 10 ? '0' : '') + n; }
 function fmtTime(d){ var h = d.getUTCHours(), mn = d.getUTCMinutes(); var ap = h >= 12 ? 'PM' : 'AM'; return (h % 12 || 12) + ':' + pad(mn) + ' ' + ap; }
 function fmtDate(d){
