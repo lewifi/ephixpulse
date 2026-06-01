@@ -3034,4 +3034,791 @@ function showToast(msg) {
 
 
 // ═════════════════════════════════════════════════════════════
-//  MOVERS — biggest climbers
+//  MOVERS — biggest climbers in the last 24h
+// ═════════════════════════════════════════════════════════════
+
+function toggleMovers() {
+  const row = document.getElementById('movers-row');
+  const btn = document.getElementById('movers-toggle');
+  if (!row || !btn) return;
+  const isOpen = row.classList.toggle('open');
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  try { localStorage.setItem('pulse_movers_open', isOpen ? '1' : '0'); } catch(_) {}
+}
+
+async function loadMovers() {
+  try {
+    // Get one snapshot from ~24h ago (oldest in the 22-26h window)
+    const start = new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString();
+    const end   = new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString();
+    const url = `${SUPABASE_REST}?captured_at=gte.${start}&captured_at=lt.${end}&order=captured_at.asc&limit=200&select=tmdb_id,media_type,rank,captured_at`;
+    const res = await fetch(url, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return;
+    const oldSnapshot = await res.json();
+    if (!oldSnapshot || oldSnapshot.length === 0) {
+      // Not enough history yet — hide the row gracefully
+      return;
+    }
+
+    // Take the EARLIEST snapshot in that window (most ~24h ago)
+    const captureGroups = {};
+    oldSnapshot.forEach(row => {
+      const t = row.captured_at;
+      if (!captureGroups[t]) captureGroups[t] = [];
+      captureGroups[t].push(row);
+    });
+    const timestamps = Object.keys(captureGroups).sort();
+    const oldestSnap = captureGroups[timestamps[0]];
+
+    // Build a map: id -> old rank
+    const oldRanks = {};
+    oldestSnap.forEach(r => {
+      oldRanks[`${r.media_type}_${r.tmdb_id}`] = r.rank;
+    });
+
+    // Compute deltas (positive = climbed; negative = fell)
+    const withDelta = allItems.map((item, idx) => {
+      const k = `${item.media_type}_${item.id}`;
+      const oldRank = oldRanks[k];
+      if (oldRank == null) return null;
+      const currentRank = idx + 1;
+      return { item, currentRank, oldRank, delta: oldRank - currentRank };
+    }).filter(x => x && Math.abs(x.delta) >= 2);
+
+    // Sort by absolute delta, descending, prioritise climbers
+    withDelta.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    const top = withDelta.slice(0, 12);
+
+    if (top.length === 0) return;
+
+    const scroll = document.getElementById('movers-scroll');
+    const row = document.getElementById('movers-row');
+    if (!scroll || !row) return;
+
+    scroll.innerHTML = top.map(({ item, currentRank, delta }) => {
+      const title = (item.title || item.name || '').replace(/"/g, '&quot;');
+      const poster = item.poster_path ? `${IMG_BASE}${item.poster_path}` : '';
+      const deltaCls = delta > 0 ? 'up' : 'down';
+      const deltaTxt = (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta);
+      return `
+        <div class="mover-card" data-type="${item.media_type}" data-id="${item.id}">
+          <div class="mover-poster-wrap">
+            ${poster ? `<img class="mover-poster" src="${poster}" alt="${title}" loading="lazy" decoding="async">` : ''}
+            <div class="mover-rank">#${currentRank}</div>
+            <div class="mover-delta ${deltaCls}">${deltaTxt}</div>
+          </div>
+          <div class="mover-title">${title}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Wire clicks
+    scroll.querySelectorAll('.mover-card').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.id, 10);
+        const type = el.dataset.type;
+        const item = allItems.find(i => i.id === id && i.media_type === type);
+        if (item) openModal(item);
+      });
+    });
+
+    row.style.display = 'flex';
+    // Restore open/closed preference (default = closed)
+    const wasOpen = (() => { try { return localStorage.getItem('pulse_movers_open') === '1'; } catch(_) { return false; } })();
+    if (wasOpen) {
+      row.classList.add('open');
+      const btn = document.getElementById('movers-toggle');
+      if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+  } catch (_) {
+    // Silent — Movers is an enhancement, not critical
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════
+//  REFRESH COUNTDOWN + ANNOUNCEMENT
+// ═════════════════════════════════════════════════════════════
+let lastRefreshTime = Date.now();
+let countdownTimer = null;
+
+function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(updateCountdown, 1000);
+  updateCountdown();
+}
+
+function updateCountdown() {
+  const el = document.getElementById('last-updated');
+  if (!el) return;
+  const elapsed = Date.now() - lastRefreshTime;
+  const remaining = Math.max(0, AUTO_REFRESH_INTERVAL - elapsed);
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const updated = new Date(lastRefreshTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const countdownStr = remaining > 0
+    ? `next in ${mins}:${secs.toString().padStart(2, '0')}`
+    : 'refreshing…';
+  el.innerHTML = `<span>Updated ${updated}</span><span class="refresh-countdown">${countdownStr}</span>`;
+
+  // When the countdown reaches zero, actually trigger the refresh — the display
+  // and the action are now the same mechanism. Guarded so it fires once.
+  if (remaining === 0 && !isRefreshing && !document.hidden) {
+    backgroundRefresh();
+  }
+}
+
+function announceRefresh() {
+  lastRefreshTime = Date.now();
+  const el = document.getElementById('last-updated');
+  if (el) {
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1500);
+  }
+  updateCountdown();
+}
+
+// ═════════════════════════════════════════════════════════════
+//  THEME (dark / light)
+// ═════════════════════════════════════════════════════════════
+const STORE_KEY_THEME = 'pulse_theme';
+
+function applyTheme() {
+  const theme = localStorage.getItem(STORE_KEY_THEME) || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#f6f7fb' : '#080a0f');
+  const btn = document.getElementById('theme-toggle');
+  if (btn) {
+    if (theme === 'light') btn.classList.add('active');
+    else btn.classList.remove('active');
+  }
+}
+
+function toggleTheme() {
+  const cur = localStorage.getItem(STORE_KEY_THEME) || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(STORE_KEY_THEME, next);
+  applyTheme();
+  playTick(next === 'light' ? 880 : 440);
+}
+
+// ═════════════════════════════════════════════════════════════
+//  SOURCE FILTERING — multi-select chips, soft re-weight
+// ═════════════════════════════════════════════════════════════
+const STORE_KEY_SOURCES = 'pulse_active_sources';
+let activeSources = new Set();  // empty = default Pulse blend
+
+function loadActiveSources() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORE_KEY_SOURCES) || '[]');
+    activeSources = new Set(arr);
+  } catch(_) { activeSources = new Set(); }
+}
+
+function saveActiveSources() {
+  try { localStorage.setItem(STORE_KEY_SOURCES, JSON.stringify([...activeSources])); } catch(_) {}
+}
+
+function applyChipState() {
+  document.querySelectorAll('.source-chip').forEach(chip => {
+    if (activeSources.has(chip.dataset.source)) chip.classList.add('active');
+    else chip.classList.remove('active');
+  });
+  // Pulse button reflects "default blend" state — only "active" when no chips selected and no Rating/Title sort
+  const pulseBtn = document.querySelector('.sort-btn[data-sort="pulse"]');
+  if (pulseBtn) {
+    if (activeSources.size === 0 && currentSort === 'pulse') pulseBtn.classList.add('active');
+    else pulseBtn.classList.remove('active');
+  }
+}
+
+function toggleSourceChip(source) {
+  if (activeSources.has(source)) activeSources.delete(source);
+  else activeSources.add(source);
+  saveActiveSources();
+  // Selecting any chip switches off Rating/Title sorts (they're conceptually different)
+  if (activeSources.size > 0 && (currentSort === 'rating' || currentSort === 'title')) {
+    currentSort = 'pulse';
+    document.querySelectorAll('.sort-btn[data-sort]').forEach(b => b.classList.remove('active'));
+  }
+  applyChipState();
+  renderGrid();
+}
+
+// Wire chip clicks
+document.querySelectorAll('.source-chip').forEach(chip => {
+  chip.addEventListener('click', () => toggleSourceChip(chip.dataset.source));
+});
+
+// Score for an item based on currently active sources (averaged 0-1, then *100 to compare with _xxxScore)
+function activeSourceScore(item) {
+  if (activeSources.size === 0) return null;  // signals "use default sort path"
+  let sum = 0, count = 0;
+  if (activeSources.has('tmdb'))    { sum += (item._tmdbScore       || 0); count++; }
+  if (activeSources.has('trakt'))   { sum += (item._traktScore      || 0); count++; }
+  if (activeSources.has('youtube')) { sum += (item._youtubeScore    || 0); count++; }
+  if (activeSources.has('wiki'))    { sum += (item._wikipediaScore  || 0); count++; }
+  return count > 0 ? sum / count : null;
+}
+
+// ═════════════════════════════════════════════════════════════
+//  VIEW TOGGLE + SOUND + AUTO-REFRESH
+// ═════════════════════════════════════════════════════════════
+const STORE_KEY_VIEW  = 'pulse_view_mode';
+const STORE_KEY_SOUND = 'pulse_sound';
+
+let viewMode = localStorage.getItem(STORE_KEY_VIEW) || 'grid';
+let soundOn  = localStorage.getItem(STORE_KEY_SOUND) === '1';
+
+function applyViewMode() {
+  const grid = document.getElementById('grid');
+  const btn  = document.getElementById('view-toggle');
+  if (viewMode === 'list') {
+    grid.classList.add('list-view');
+    btn.classList.add('active');
+  } else {
+    grid.classList.remove('list-view');
+    btn.classList.remove('active');
+  }
+}
+
+function toggleView() {
+  viewMode = viewMode === 'grid' ? 'list' : 'grid';
+  localStorage.setItem(STORE_KEY_VIEW, viewMode);
+  applyViewMode();
+  playTick(viewMode === 'list' ? 520 : 660);
+}
+
+function toggleFilters() {
+  const panel = document.getElementById('controls-collapse');
+  const btn = document.getElementById('filter-toggle');
+  const open = panel.classList.toggle('open');
+  if (btn) {
+    btn.classList.toggle('active', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+}
+
+function applySoundState() {
+  const btn = document.getElementById('sound-toggle');
+  document.querySelectorAll('.sound-on-mark').forEach(e => e.style.display = soundOn ? '' : 'none');
+  document.querySelectorAll('.sound-off-mark').forEach(e => e.style.display = soundOn ? 'none' : '');
+  if (soundOn) btn.classList.add('active'); else btn.classList.remove('active');
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem(STORE_KEY_SOUND, soundOn ? '1' : '0');
+  applySoundState();
+  if (soundOn) playTick(660);  // confirmation blip
+}
+
+// ── Tiny synthesised tick using Web Audio (no files, near-zero cost) ──
+let audioCtx;
+function playTick(freq = 600, dur = 0.07, vol = 0.04) {
+  if (!soundOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur);
+  } catch(_) {}
+}
+
+// Pleasant two-note chime for new entries
+function playNewEntryChime() {
+  if (!soundOn) return;
+  playTick(660, 0.08, 0.05);
+  setTimeout(() => playTick(880, 0.10, 0.05), 90);
+}
+
+// ── AUTO-REFRESH ──
+const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;  // 5 minutes
+let refreshTimer = null;
+let isRefreshing = false;
+
+function startAutoRefresh() {
+  // The refresh is now driven by the countdown reaching zero (see
+  // updateCountdown), so no separate interval is needed — that decoupling was
+  // why it could sit on "refreshing…" without ever refreshing. We only need to
+  // catch up when the tab becomes visible again after a refresh fell due while
+  // it was hidden.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || isRefreshing) return;
+    if (Date.now() - lastRefreshTime >= AUTO_REFRESH_INTERVAL) backgroundRefresh();
+  });
+}
+
+async function backgroundRefresh() {
+  if (isRefreshing || document.hidden) return;  // skip if tab not visible
+  isRefreshing = true;
+
+  // Flash the live dot to signal a refresh is happening
+  const dot = document.querySelector('.live-dot');
+  if (dot) { dot.classList.add('refreshing'); setTimeout(() => dot.classList.remove('refreshing'), 800); }
+
+  try {
+    const tmdbItems = await fetchTMDB();
+    const [traktResult, youtubeResult, wikiResult] = await Promise.allSettled([
+      fetchTrakt(), fetchYouTube(tmdbItems), fetchWikipedia(tmdbItems)
+    ]);
+    const traktMap   = traktResult.status   === 'fulfilled' ? traktResult.value   : {};
+    const youtubeMap = youtubeResult.status === 'fulfilled' ? youtubeResult.value : {};
+    const wikiMap    = wikiResult.status    === 'fulfilled' ? wikiResult.value    : {};
+
+    const refreshed = mergeAndScore(tmdbItems, traktMap, youtubeMap, wikiMap, {
+      trakt:     Object.keys(traktMap).length   > 0 ? 'ok' : 'fail',
+      youtube:   Object.keys(youtubeMap).length > 0 ? 'ok' : 'fail',
+      wikipedia: Object.keys(wikiMap).length    > 0 ? 'ok' : 'fail'
+    });
+
+    // Detect entries new since the LAST refresh (separate from visit baseline)
+    const prevTop = new Set(allItems.slice(0, NEW_ENTRY_THRESHOLD).map(i => `${i.media_type}_${i.id}`));
+    const freshNew = refreshed.slice(0, NEW_ENTRY_THRESHOLD).filter(i => !prevTop.has(`${i.media_type}_${i.id}`));
+    freshNew.forEach(i => { i._isNew = true; });
+
+    allItems = refreshed;
+
+    // If opted into notifications, add fresh new entries to the bell
+    const optedIn = localStorage.getItem(STORE_KEY_OPTIN) === '1';
+    if (optedIn && freshNew.length > 0) {
+      newEntries = [...freshNew, ...newEntries];
+      renderBellState();
+      playNewEntryChime();
+    }
+
+    renderGrid();
+    saveCurrentRanks();
+
+    announceRefresh();
+  } catch(err) {
+    console.warn('[AutoRefresh] failed (non-fatal):', err.message);
+    lastRefreshTime = Date.now();   // back off a full interval; don't hammer every second
+    updateCountdown();
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+//  SUPABASE HISTORY — write snapshots, read trajectories
+// ═════════════════════════════════════════════════════════════
+const SNAPSHOT_INTERVAL = 60 * 60 * 1000;  // once per hour max
+const STORE_KEY_LAST_SNAP = 'pulse_last_snapshot';
+
+async function writeSnapshot(rankedItems) {
+  // Rate-limit: only write if last snapshot was over an hour ago
+  try {
+    const last = parseInt(localStorage.getItem(STORE_KEY_LAST_SNAP) || '0', 10);
+    if (Date.now() - last < SNAPSHOT_INTERVAL) return;  // too soon
+  } catch(_) {}
+
+  const captured = new Date().toISOString();
+  const rows = rankedItems.slice(0, 100).map((item, idx) => ({
+    captured_at: captured,
+    tmdb_id: item.id,
+    media_type: item.media_type,
+    title: item.title || item.name || null,
+    rank: idx + 1,
+    pulse_score: item._pulseScore || 0
+  }));
+
+  try {
+    const res = await fetch(SUPABASE_REST, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(rows)
+    });
+    if (res.ok) {
+      localStorage.setItem(STORE_KEY_LAST_SNAP, Date.now().toString());
+      console.log(`%c[History] Snapshot saved (${rows.length} titles)`, 'color:#38d9a9');
+    } else {
+      console.warn('[History] Snapshot write failed:', res.status);
+    }
+  } catch(err) {
+    console.warn('[History] Snapshot error (non-fatal):', err.message);
+  }
+}
+
+// Read a single title's last-7-days trajectory
+async function fetchTitleHistory(tmdbId, mediaType) {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const url = `${SUPABASE_REST}?tmdb_id=eq.${tmdbId}&media_type=eq.${encodeURIComponent(mediaType)}&captured_at=gte.${since}&order=captured_at.asc&select=captured_at,rank,pulse_score`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch(_) {
+    return [];
+  }
+}
+
+// Build a small inline SVG sparkline from history points
+function buildSparkline(history) {
+  if (!history || history.length < 2) return null;
+
+  const w = 280, chartH = 60, pad = 6, axisH = 16;
+  const h = chartH + axisH;
+  const scores = history.map(p => p.pulse_score);
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const range = max - min || 1;
+
+  const pts = history.map((p, i) => {
+    const x = pad + (i / (history.length - 1)) * (w - pad * 2);
+    const y = chartH - pad - ((p.pulse_score - min) / range) * (chartH - pad * 2);
+    return [x, y];
+  });
+
+  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const areaPath = linePath + ` L${pts[pts.length-1][0].toFixed(1)},${chartH - pad} L${pts[0][0].toFixed(1)},${chartH - pad} Z`;
+
+  const first = scores[0], lastVal = scores[scores.length-1];
+  const trend = lastVal > first ? 'up' : lastVal < first ? 'down' : 'flat';
+  const trendColor = trend === 'up' ? '#38d9a9' : trend === 'down' ? '#ff4757' : '#7eb8d4';
+
+  // Date axis labels: start, mid, end
+  const fmt = ts => {
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+  const startDate = fmt(history[0].captured_at);
+  const endDate   = fmt(history[history.length - 1].captured_at);
+  const midIdx    = Math.floor(history.length / 2);
+  const midDate   = fmt(history[midIdx].captured_at);
+  const midX      = pad + (midIdx / (history.length - 1)) * (w - pad * 2);
+
+  // Pulse score axis hints — show min/max
+  const minLabel = Math.round(min).toString();
+  const maxLabel = Math.round(max).toString();
+
+  return `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="display:block">
+      <defs>
+        <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${trendColor}" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="${trendColor}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- Min/Max guide lines (faint) -->
+      <line x1="${pad}" y1="${chartH - pad}" x2="${w - pad}" y2="${chartH - pad}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <line x1="${pad}" y1="${pad}" x2="${w - pad}" y2="${pad}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <path d="${areaPath}" fill="url(#spark-grad)"/>
+      <path d="${linePath}" fill="none" stroke="${trendColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}" r="3" fill="${trendColor}"/>
+      <!-- Y axis hints -->
+      <text x="${w - pad - 1}" y="${pad + 8}" text-anchor="end" font-family="DM Sans, sans-serif" font-size="9" fill="rgba(255,255,255,0.35)">${maxLabel}</text>
+      <text x="${w - pad - 1}" y="${chartH - pad - 2}" text-anchor="end" font-family="DM Sans, sans-serif" font-size="9" fill="rgba(255,255,255,0.35)">${minLabel}</text>
+      <!-- X axis date labels -->
+      <text x="${pad}" y="${chartH + 12}" font-family="DM Sans, sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">${startDate}</text>
+      <text x="${midX.toFixed(1)}" y="${chartH + 12}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="9" fill="rgba(255,255,255,0.35)">${midDate}</text>
+      <text x="${w - pad}" y="${chartH + 12}" text-anchor="end" font-family="DM Sans, sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">${endDate}</text>
+    </svg>
+  `;
+}
+
+// ═════════════════════════════════════════════════════════════
+//  WATCHLIST + SEARCH + RANDOM + RANK CHANGES + KEYBOARD
+// ═════════════════════════════════════════════════════════════
+const STORE_KEY_WATCHLIST = 'pulse_watchlist';
+const STORE_KEY_PREV_RANKS = 'pulse_prev_ranks';
+
+let watchlist = new Set();
+let prevRanks = {};
+let searchQuery = '';
+
+function loadWatchlist() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORE_KEY_WATCHLIST) || '[]');
+    watchlist = new Set(arr);
+  } catch(_) { watchlist = new Set(); }
+  updateWatchlistCount();
+}
+
+function saveWatchlist() {
+  try { localStorage.setItem(STORE_KEY_WATCHLIST, JSON.stringify([...watchlist])); } catch(_) {}
+  updateWatchlistCount();
+}
+
+function watchlistKey(item) { return `${item.media_type}_${item.id}`; }
+
+function toggleWatchlist(item, btn) {
+  const k = watchlistKey(item);
+  if (watchlist.has(k)) {
+    watchlist.delete(k);
+    btn.classList.remove('saved');
+    btn.innerHTML = '☆';
+    btn.setAttribute('title', 'Save to My List');
+    btn.setAttribute('aria-label', 'Add to My List');
+  } else {
+    watchlist.add(k);
+    btn.classList.add('saved');
+    btn.innerHTML = '★';
+    btn.setAttribute('title', 'Remove from My List');
+    btn.setAttribute('aria-label', 'Remove from My List');
+  }
+  saveWatchlist();
+  // If currently on watchlist tab, re-render to reflect removal
+  if (currentFilter === 'watchlist') renderGrid();
+}
+
+function updateWatchlistCount() {
+  const el = document.getElementById('watchlist-count');
+  if (el) el.textContent = watchlist.size > 0 ? `(${watchlist.size})` : '';
+}
+
+// ── Rank change tracking ──
+function loadPrevRanks() {
+  try { prevRanks = JSON.parse(localStorage.getItem(STORE_KEY_PREV_RANKS) || '{}'); }
+  catch(_) { prevRanks = {}; }
+}
+
+function saveCurrentRanks() {
+  const ranks = {};
+  allItems.forEach((item, idx) => {
+    ranks[`${item.media_type}_${item.id}`] = idx + 1;
+  });
+  try { localStorage.setItem(STORE_KEY_PREV_RANKS, JSON.stringify(ranks)); } catch(_) {}
+}
+
+function getRankChange(item, currentRank) {
+  const k = `${item.media_type}_${item.id}`;
+  const prev = prevRanks[k];
+  if (!prev || prev === currentRank) return null;
+  return prev - currentRank;  // positive = moved up
+}
+
+// ── Search ──
+const searchInput = document.getElementById('search-input');
+const searchClear = document.getElementById('search-clear');
+
+searchInput.addEventListener('input', e => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  searchClear.classList.toggle('visible', searchQuery.length > 0);
+  renderGrid();
+});
+
+function clearSearch() {
+  searchQuery = '';
+  searchInput.value = '';
+  searchClear.classList.remove('visible');
+  renderGrid();
+}
+
+// ── Random pick ──
+function openRandomTitle() {
+  if (allItems.length === 0) return;
+  const item = allItems[Math.floor(Math.random() * allItems.length)];
+  gaTrack('random_pick', item);
+  openModal(item);
+}
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', e => {
+  // Don't fire when typing
+  if (e.target.matches('input, textarea')) return;
+  // Don't override existing ESC handler
+  if (e.key === '/') {
+    e.preventDefault();
+    searchInput.focus();
+  } else if (e.key === 'r' || e.key === 'R') {
+    if (document.getElementById('modal-overlay').classList.contains('open')) return;
+    openRandomTitle();
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
+//  NEW-ENTRY DETECTION + BELL NOTIFICATIONS
+// ═════════════════════════════════════════════════════════════
+const NEW_ENTRY_THRESHOLD = 25;  // top N to watch for new entries
+const STORE_KEY_PREV       = 'pulse_prev_top25';
+const STORE_KEY_OPTIN      = 'pulse_bell_optin';
+const STORE_KEY_BASELINE   = 'pulse_bell_baseline_set';
+
+let newEntries = [];
+
+function detectNewEntries(rankedItems) {
+  // First-ever opt-in: just record baseline, don't show notifications
+  const optedIn = localStorage.getItem(STORE_KEY_OPTIN) === '1';
+  const baselineSet = localStorage.getItem(STORE_KEY_BASELINE) === '1';
+
+  const currentTop = rankedItems.slice(0, NEW_ENTRY_THRESHOLD);
+  const currentIds = currentTop.map(i => `${i.media_type}_${i.id}`);
+
+  let prevIds = [];
+  try {
+    prevIds = JSON.parse(localStorage.getItem(STORE_KEY_PREV) || '[]');
+  } catch(_) {}
+
+  // Find new entries (in current but not previous)
+  const newOnes = currentTop.filter((item, idx) => {
+    const id = `${item.media_type}_${item.id}`;
+    return !prevIds.includes(id);
+  });
+
+  // Save current as new "previous" baseline
+  try {
+    localStorage.setItem(STORE_KEY_PREV, JSON.stringify(currentIds));
+    if (!baselineSet) localStorage.setItem(STORE_KEY_BASELINE, '1');
+  } catch(_) {}
+
+  // Mark new ones on the items themselves for card rendering
+  newOnes.forEach(item => { item._isNew = true; });
+
+  // If this is the user's first visit, or they haven't opted in, don't surface notifications
+  if (!optedIn || !baselineSet) {
+    return [];
+  }
+
+  return newOnes;
+}
+
+function renderBellState() {
+  const optedIn = localStorage.getItem(STORE_KEY_OPTIN) === '1';
+  const btn     = document.getElementById('bell-btn');
+  const badge   = document.getElementById('bell-badge');
+  const toggle  = document.getElementById('bell-toggle');
+  const list    = document.getElementById('bell-list');
+
+  // Toggle switch state
+  if (optedIn) toggle.classList.add('on');
+  else         toggle.classList.remove('on');
+
+  if (optedIn) btn.classList.add('active');
+  else         btn.classList.remove('active');
+
+  // Badge count
+  if (optedIn && newEntries.length > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = newEntries.length > 9 ? '9+' : newEntries.length;
+    btn.classList.add('has-new');
+  } else {
+    badge.style.display = 'none';
+    btn.classList.remove('has-new');
+  }
+
+  // Panel list
+  if (!optedIn) {
+    list.innerHTML = '<div class="bell-empty">Enable notifications above to see when new titles enter the top 25.</div>';
+  } else if (newEntries.length === 0) {
+    list.innerHTML = '<div class="bell-empty">No new entries since your last visit.<br><br>Check back later — the chart updates throughout the day.</div>';
+  } else {
+    list.innerHTML = newEntries.map(item => {
+      const title  = item.title || item.name || 'Untitled';
+      const year   = (item.release_date || item.first_air_date || '').slice(0,4);
+      const poster = item.poster_path ? `${IMG_BASE}${item.poster_path}` : '';
+      const rank   = allItems.findIndex(i => i.id === item.id && i.media_type === item.media_type) + 1;
+      return `
+        <div class="bell-entry" onclick="openModalById('${item.media_type}', ${item.id})">
+          ${poster ? `<img class="bell-entry-poster" src="${poster}" alt="" loading="lazy">` : '<div class="bell-entry-poster"></div>'}
+          <div class="bell-entry-info">
+            <div class="bell-entry-title">${escHtml(title)}</div>
+            <div class="bell-entry-meta">${year || ''} · ${item.media_type === 'movie' ? 'Film' : 'TV'}</div>
+          </div>
+          <div class="bell-entry-rank">#${rank}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function toggleBellOptIn() {
+  const cur = localStorage.getItem(STORE_KEY_OPTIN) === '1';
+  if (cur) {
+    localStorage.setItem(STORE_KEY_OPTIN, '0');
+  } else {
+    localStorage.setItem(STORE_KEY_OPTIN, '1');
+    // First opt-in: don't show retroactive entries — set baseline = "now"
+    if (localStorage.getItem(STORE_KEY_BASELINE) !== '1') {
+      // baseline already set by detectNewEntries; this is just safety
+      localStorage.setItem(STORE_KEY_BASELINE, '1');
+    }
+    newEntries = [];  // clear any backlog
+  }
+  renderBellState();
+}
+
+function toggleBellPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('bell-panel');
+  panel.classList.toggle('open');
+}
+
+function openModalById(type, id) {
+  const item = allItems.find(i => i.media_type === type && i.id === id);
+  if (item) {
+    document.getElementById('bell-panel').classList.remove('open');
+    openModal(item);
+  }
+}
+
+// Close panels on outside click
+document.addEventListener('click', e => {
+  const bellPanel = document.getElementById('bell-panel');
+  const bellWrap  = document.getElementById('bell-wrap');
+  if (bellPanel && bellPanel.classList.contains('open') && !bellWrap.contains(e.target)) {
+    bellPanel.classList.remove('open');
+  }
+  const infoIcon = document.getElementById('info-icon');
+  if (infoIcon && infoIcon.classList.contains('open') && !infoIcon.contains(e.target)) {
+    infoIcon.classList.remove('open');
+  }
+});
+
+function toggleInfo(e) {
+  e.stopPropagation();
+  document.getElementById('info-icon').classList.toggle('open');
+}
+
+// ── BACK TO TOP ──────────────────────────────────────────────────
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('back-to-top');
+  if (!btn) return;
+  if (window.scrollY > 400) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+}, { passive: true });
+
+// Logo keyboard accessibility
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('logo')) {
+    e.preventDefault();
+    scrollToTop();
+  }
+});
+
+// ── BOOT ─────────────────────────────────────────────────────────
+loadWatchlist();
+loadPrevRanks();
+applySoundState();
+startLoad();
+</script>
+<button id="back-to-top" onclick="scrollToTop()" aria-label="Back to top" title="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+</button>
+</body>
+</html>
