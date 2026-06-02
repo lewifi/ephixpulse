@@ -232,7 +232,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <div class="trophy">🏆</div>
     <h1>FIFA WORLD CUP <span class="yr">2026</span></h1>
     <div class="sub">104 matches · Jun 11 – Jul 19 · USA, Canada, Mexico</div>
-    <div class="rem">🔔 1-hour reminder on all .ics events</div>
+    <div class="rem">📅 Clean calendar import · no notifications</div>
   </div>
 </div>
 
@@ -264,7 +264,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <div class="dlwrap">
     <button id="dlBtn">⬇ Download All 104 Matches (.ics)</button>
     <button id="shareBtn" style="width:100%;margin-top:8px;background:#1e3a5f;color:#bfdbfe;border:1px solid #2563eb;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">🔗 Share this schedule</button>
-    <div class="hint">Import into Google Calendar → Other calendars → Import (keeps the 1-hour reminders)</div>
+    <div class="hint">Import into Google Calendar → Other calendars → Import. No alerts, so it won't fill your notifications.</div>
   </div>
 
   <div class="list" id="list"></div>
@@ -572,12 +572,13 @@ function gcalUrl(m){
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + icsFmt(start) + '/' + icsFmt(end) + '&location=' + loc + '&details=' + det;
 }
 function buildICS(){
+  var stamp = icsFmt(new Date());
   var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FIFA World Cup 2026//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:FIFA World Cup 2026'];
   MATCHES.forEach(function(m,i){
     var s = getUTC(m), e = new Date(s.getTime() + 7200000);
-    lines.push('BEGIN:VEVENT','UID:wc2026-' + i + '@calendar','DTSTART:' + icsFmt(s),'DTEND:' + icsFmt(e),
+    lines.push('BEGIN:VEVENT','UID:wc2026-' + i + '@calendar','DTSTAMP:' + stamp,'DTSTART:' + icsFmt(s),'DTEND:' + icsFmt(e),
       'SUMMARY:⚽ WC2026: ' + m.teams,'LOCATION:' + m.venue,'DESCRIPTION:' + m.stage + (m.group ? ' Group ' + m.group : ''),
-      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Kicks off in 1 hour','TRIGGER:-PT60M','END:VALARM','END:VEVENT');
+      'END:VEVENT');
   });
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
@@ -586,10 +587,9 @@ function buildICS(){
 function buildSingleICS(m){
   var s = getUTC(m), e = new Date(s.getTime() + 7200000);
   return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FIFA World Cup 2026//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
-    'BEGIN:VEVENT','UID:wc2026-' + s.getTime() + '@calendar','DTSTART:' + icsFmt(s),'DTEND:' + icsFmt(e),
+    'BEGIN:VEVENT','UID:wc2026-' + s.getTime() + '@calendar','DTSTAMP:' + icsFmt(new Date()),'DTSTART:' + icsFmt(s),'DTEND:' + icsFmt(e),
     'SUMMARY:⚽ WC2026: ' + m.teams,'LOCATION:' + m.venue,
     'DESCRIPTION:FIFA World Cup 2026 — ' + m.stage + (m.group ? ' Group ' + m.group : '') + (m.match ? ' Match ' + m.match : ''),
-    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Kicks off in 1 hour','TRIGGER:-PT60M','END:VALARM',
     'END:VEVENT','END:VCALENDAR'].join('\r\n');
 }
 function safeFile(m){
