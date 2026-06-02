@@ -548,6 +548,10 @@ function fmtDate(d){
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return days[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + months[d.getUTCMonth()];
 }
+function fmtDay(d){
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getUTCDate() + ' ' + months[d.getUTCMonth()];
+}
 function icsFmt(d){ return d.toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z'; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -639,14 +643,14 @@ function renderList(){
       var venueStr;
       if (vtz){
         var vLocal = toLocal(getUTC(m), vtz.o);
-        venueStr = '<span class="venue">' + esc(m.venue) + '</span> <span class="vtime">' + fmtTime(vLocal) + ' ' + vtz.abbr + '</span>';
+        venueStr = '<span class="venue">' + esc(m.venue) + '</span> <span class="vtime">' + fmtTime(vLocal) + ' ' + vtz.abbr + ', ' + fmtDay(vLocal) + '</span>';
       } else {
         venueStr = '<span class="venue">' + esc(m.venue) + '</span>';
       }
       html += '<div class="card' + (fav ? ' fav' : '') + '">' +
         '<div class="dot" style="background:' + col + '"></div>' +
         '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + '</div>' +
-        '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
+        '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + ', ' + fmtDay(it.local) + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
         '<div class="addbtns">' +
           '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
           '<button class="icsbtn" data-idx="' + it.idx + '">+ ICS</button>' +
