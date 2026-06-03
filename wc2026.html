@@ -167,6 +167,20 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .bcm-tier.mixed { background: #1e3a5f; color: #93c5fd; }
 .bcm-empty { padding: 20px; text-align: center; color: #64748b; font-size: 13px; }
 .bcm-foot { font-size: 11px; color: #475569; padding: 10px 16px; border-top: 1px solid #1e293b; line-height: 1.45; }
+.sqm-back { background: none; border: none; color: #7eb8d4; font-size: 13px; cursor: pointer; padding: 10px 16px; }
+.sqm-team { display: flex; justify-content: space-between; align-items: center; padding: 11px 12px; border-bottom: 1px solid #131c2e; cursor: pointer; }
+.sqm-team:hover { background: #14233b; }
+.sqm-team .nm { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.sqm-team .gp { font-size: 11px; color: #64748b; }
+.sqm-rhead { padding: 12px 12px 4px; }
+.sqm-rhead .tn { font-size: 17px; font-weight: 800; color: #f1f5f9; }
+.sqm-rhead .meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.sqm-grp { font-size: 11px; font-weight: 800; letter-spacing: .5px; color: #7eb8d4; padding: 12px 12px 4px; text-transform: uppercase; }
+.sqm-p { display: flex; align-items: baseline; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #131c2e; }
+.sqm-p .no { width: 22px; color: #64748b; font-size: 12px; font-weight: 700; text-align: right; flex: none; }
+.sqm-p .pn { font-size: 13px; color: #e2e8f0; font-weight: 600; }
+.sqm-p .pc { font-size: 12px; color: #64748b; }
+.sqm-p .ag { margin-left: auto; font-size: 11px; color: #64748b; white-space: nowrap; }
 .cm-overlay { position: fixed; inset: 0; background: rgba(2,6,18,0.78); align-items: center; justify-content: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
 .cm-box { background: #0b1220; border: 1px solid #1e293b; border-radius: 14px; max-width: 360px; width: 100%; padding: 24px; position: relative; text-align: center; }
 .cm-box h3 { margin: 0 0 8px; color: #f1f5f9; font-size: 18px; }
@@ -318,6 +332,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <div class="watchwrap">
     <div id="watchHere" class="watch-here" style="display:none;"></div>
     <button id="watchBtn" class="watch-btn">📺 TV broadcasters by country</button>
+    <button id="squadBtn" class="watch-btn" style="margin-top:8px;">📋 Team squads</button>
   </div>
 
   <div id="bcModal" class="bcm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="TV broadcasters by country">
@@ -396,6 +411,21 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <div class="mfoot">
       <button class="clear" id="clearFavs">Clear all</button>
       <button class="done" id="doneFavs">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="squadModal" class="bcm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Team squads">
+  <div class="bcm-panel">
+    <div class="bcm-head"><strong id="sqmTitle">📋 Team squads</strong><button id="sqmClose" class="bcm-close" aria-label="Close">✕</button></div>
+    <div id="sqmListView">
+      <input id="sqmSearch" class="bcm-search" type="search" placeholder="Search team…" autocomplete="off">
+      <div id="sqmTeams" class="bcm-list"></div>
+      <div class="bcm-foot">Official 26-player squads as published by FIFA on 2 June. Late injury and goalkeeper replacements can still occur.</div>
+    </div>
+    <div id="sqmRosterView" style="display:none;">
+      <button id="sqmBack" class="sqm-back">← All teams</button>
+      <div id="sqmRoster" class="bcm-list"></div>
     </div>
   </div>
 </div>
@@ -979,6 +1009,62 @@ init();
   modal.addEventListener('click', function(e){ if(e.target===modal) close(); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modal.style.display!=='none') close(); });
   searchEl.addEventListener('input', function(){ render(searchEl.value); });
+})();
+
+/* ---- Team squads: team list -> position-grouped roster, age computed live from dob ---- */
+(function(){
+  var data=null, btn=document.getElementById('squadBtn'), modal=document.getElementById('squadModal');
+  if(!btn||!modal) return;
+  var listView=document.getElementById('sqmListView'), rosterView=document.getElementById('sqmRosterView');
+  var teamsEl=document.getElementById('sqmTeams'), rosterEl=document.getElementById('sqmRoster');
+  var searchEl=document.getElementById('sqmSearch'), titleEl=document.getElementById('sqmTitle');
+  var POS=[['GK','Goalkeepers'],['DF','Defenders'],['MF','Midfielders'],['FW','Forwards']];
+
+  function ageFrom(dob){ if(!dob) return null; var b=new Date(dob+'T00:00:00Z'); if(isNaN(b.getTime())) return null; var n=new Date(), a=n.getUTCFullYear()-b.getUTCFullYear(), m=n.getUTCMonth()-b.getUTCMonth(); if(m<0||(m===0&&n.getUTCDate()<b.getUTCDate())) a--; return a; }
+  function showList(){ rosterView.style.display='none'; listView.style.display=''; titleEl.textContent='📋 Team squads'; }
+  function renderTeams(filter){
+    if(!data) return;
+    var f=(filter||'').toLowerCase();
+    var teams=data.teams.filter(function(t){ return !f||t.name.toLowerCase().indexOf(f)>=0; });
+    teamsEl.innerHTML = teams.length ? teams.map(function(t){
+      return '<div class="sqm-team" data-team="'+esc(t.name)+'"><span class="nm">'+esc(t.name)+'</span><span class="gp">'+esc(t.group||'')+'</span></div>';
+    }).join('') : '<div class="bcm-empty">No match.</div>';
+  }
+  function renderRoster(team){
+    var t=data.teams.filter(function(x){return x.name===team;})[0];
+    if(!t) return;
+    titleEl.textContent=t.name;
+    var html='<div class="sqm-rhead"><div class="tn">'+esc(t.name)+'</div><div class="meta">'+esc(t.group||'')+(t.coach?' · '+esc(t.coach):'')+' · '+t.players.length+' players</div></div>';
+    POS.forEach(function(pg){
+      var ps=t.players.filter(function(p){ return (p.pos||'').toUpperCase()===pg[0]; });
+      if(!ps.length) return;
+      ps.sort(function(a,b){ return (a.num||99)-(b.num||99); });
+      html+='<div class="sqm-grp">'+pg[1]+'</div>';
+      ps.forEach(function(p){
+        var age=ageFrom(p.dob);
+        html+='<div class="sqm-p"><span class="no">'+(p.num||'')+'</span><span class="pn">'+esc(p.name||'')+'</span> <span class="pc">'+esc(p.club||'')+'</span><span class="ag">'+(age!=null?age:'')+(p.caps!=null?' · '+p.caps+' caps':'')+'</span></div>';
+      });
+    });
+    rosterEl.innerHTML=html; rosterEl.scrollTop=0;
+    listView.style.display='none'; rosterView.style.display='';
+  }
+  function open(){
+    modal.style.display='flex'; document.body.style.overflow='hidden'; showList();
+    if(!data){
+      teamsEl.innerHTML='<div class="bcm-empty">Loading\u2026</div>';
+      fetch('/squads.json').then(function(r){return r.json();}).then(function(d){
+        data=d; (data.teams||[]).sort(function(a,b){ return a.name.localeCompare(b.name); }); renderTeams(''); if(searchEl) searchEl.focus();
+      }).catch(function(){ teamsEl.innerHTML='<div class="bcm-empty">Could not load squads.</div>'; });
+    } else { renderTeams(searchEl?searchEl.value:''); }
+  }
+  function close(){ modal.style.display='none'; document.body.style.overflow=''; }
+  btn.addEventListener('click', open);
+  document.getElementById('sqmClose').addEventListener('click', close);
+  document.getElementById('sqmBack').addEventListener('click', showList);
+  modal.addEventListener('click', function(e){ if(e.target===modal) close(); });
+  teamsEl.addEventListener('click', function(e){ var row=e.target.closest('.sqm-team'); if(row) renderRoster(row.getAttribute('data-team')); });
+  if(searchEl) searchEl.addEventListener('input', function(){ renderTeams(searchEl.value); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modal.style.display!=='none'){ if(rosterView.style.display!=='none') showList(); else close(); } });
 })();
 </script>
 </body>
