@@ -1,4 +1,4 @@
-Welcome to the Ephixp Pulse!
+Welcome to Ephix Pulse!
 
 Live TV & movie trending aggregator running off cloudflare backend with static HTML, Workers serverless functions and Supabase database store. 
 https://ephix.net
