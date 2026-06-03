@@ -139,15 +139,16 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .favchips .chip { background: rgba(240,180,41,0.12); color: #f0b429; border-radius: 14px; padding: 3px 9px; font-size: 12px; font-weight: 600; }
 
 .dlwrap { padding: 12px 16px; }
-.dlwrap button { width: 100%; background: #0f5132; color: #f0b429; border: 1px solid rgba(240,180,41,0.3); border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+.dl-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pill-btn.dl { background: #0f5132; color: #f0b429; border-color: rgba(240,180,41,0.4); }
+.pill-btn.accent { background: #1e3a5f; color: #bfdbfe; border-color: #2563eb; }
 .dlwrap .hint { font-size: 11px; color: #475569; text-align: center; margin-top: 6px; }
-.dlwrap a.subbtn { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; text-align: center; text-decoration: none; background: #25304a; color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700; }
-.dlwrap a.subbtn:hover { border-color: #94a3b8; color: #f1f5f9; }
 .watchwrap { padding: 0 16px 12px; }
 .watch-here { font-size: 13px; color: #cbd5e1; background: #14233b; border: 1px solid #1e3a5f; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; line-height: 1.4; }
 .watch-here strong { color: #f1f5f9; }
-.watch-btn { width: 100%; background: #1a1f2e; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; }
-.watch-btn:hover { border-color: #64748b; color: #f1f5f9; }
+.watch-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pill-btn { background: #1a1f2e; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+.pill-btn:hover { border-color: #64748b; color: #f1f5f9; }
 .bcm-overlay { position: fixed; inset: 0; background: rgba(2,6,18,0.78); display: flex; align-items: flex-end; justify-content: center; z-index: 999; }
 .bcm-panel { background: #0b1220; border: 1px solid #1e293b; border-radius: 14px 14px 0 0; width: 100%; max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; }
 @media (min-width: 600px){ .bcm-overlay { align-items: center; } .bcm-panel { border-radius: 14px; } }
@@ -320,20 +321,22 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="manage" id="manageFavs">＋ Choose favourite teams</button>
   </div>
 
-  <div class="filters" id="filters"></div>
-
   <div class="dlwrap">
-    <button id="dlBtn">⬇ Download all 104 matches (.ics)</button>
-    <a class="subbtn" href="https://calendar.google.com/calendar/render?cid=webcal://ephix.net/wc2026.ics" target="_blank" rel="noopener noreferrer">📅 Subscribe in Google Calendar</a>
-    <a class="subbtn" href="webcal://ephix.net/wc2026.ics">🍎 Subscribe in Apple / Outlook</a>
-    <button id="shareBtn" style="width:100%;margin-top:8px;background:#1e3a5f;color:#bfdbfe;border:1px solid #2563eb;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">🔗 Share this schedule</button>
-    <div class="hint">Download imports once. Subscribe is a live feed that updates itself as the bracket fills in. No alerts either way. Note: Google's mobile app adds feeds from a computer only.</div>
+    <div class="dl-actions">
+      <button id="dlBtn" class="pill-btn dl">⬇ Download .ics</button>
+      <a class="pill-btn" href="https://calendar.google.com/calendar/render?cid=webcal://ephix.net/wc2026.ics" target="_blank" rel="noopener noreferrer">📅 Google</a>
+      <a class="pill-btn" href="webcal://ephix.net/wc2026.ics">🍎 Apple</a>
+      <button id="shareBtn" class="pill-btn accent">🔗 Share</button>
+    </div>
+    <div class="hint">Download imports once. Subscribe (Google / Apple) is a live feed that updates itself as the bracket fills in. No alerts either way. Note: Google's mobile app adds feeds from a computer only.</div>
   </div>
 
   <div class="watchwrap">
     <div id="watchHere" class="watch-here" style="display:none;"></div>
-    <button id="watchBtn" class="watch-btn">📺 TV broadcasters by country</button>
-    <button id="squadBtn" class="watch-btn" style="margin-top:8px;">📋 Team squads</button>
+    <div class="watch-actions">
+      <button id="watchBtn" class="pill-btn">📺 Broadcasters</button>
+      <button id="squadBtn" class="pill-btn">📋 Squads</button>
+    </div>
   </div>
 
   <div id="bcModal" class="bcm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="TV broadcasters by country">
@@ -344,6 +347,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
       <div class="bcm-foot">Curated from public broadcaster announcements and can change — always check local listings. No broadcaster shown? FIFA+ (plus.fifa.com) and broadcasters' YouTube channels carry clips and highlights.</div>
     </div>
   </div>
+
+  <div class="filters" id="filters"></div>
 
   <div class="list" id="list"></div>
 </div>
