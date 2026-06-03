@@ -300,6 +300,15 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button id="watchBtn" class="watch-btn">📺 TV broadcasters by country</button>
   </div>
 
+  <div id="bcModal" class="bcm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="TV broadcasters by country">
+    <div class="bcm-panel">
+      <div class="bcm-head"><strong>📺 Where to watch</strong><button id="bcmClose" class="bcm-close" aria-label="Close">✕</button></div>
+      <input id="bcmSearch" class="bcm-search" type="search" placeholder="Search your country…" autocomplete="off">
+      <div id="bcmList" class="bcm-list"></div>
+      <div class="bcm-foot">Curated from public broadcaster announcements and can change — always check local listings. No broadcaster shown? FIFA+ (plus.fifa.com) and broadcasters' YouTube channels carry clips and highlights.</div>
+    </div>
+  </div>
+
   <div class="list" id="list"></div>
 </div>
 
@@ -908,13 +917,5 @@ init();
   searchEl.addEventListener('input', function(){ render(searchEl.value); });
 })();
 </script>
-<div id="bcModal" class="bcm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="TV broadcasters by country">
-  <div class="bcm-panel">
-    <div class="bcm-head"><strong>📺 Where to watch</strong><button id="bcmClose" class="bcm-close" aria-label="Close">✕</button></div>
-    <input id="bcmSearch" class="bcm-search" type="search" placeholder="Search your country…" autocomplete="off">
-    <div id="bcmList" class="bcm-list"></div>
-    <div class="bcm-foot">Curated from public broadcaster announcements and can change — always check local listings. No broadcaster shown? FIFA+ (plus.fifa.com) and broadcasters' YouTube channels carry clips and highlights.</div>
-  </div>
-</div>
 </body>
 </html>
