@@ -374,7 +374,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="#" onclick="document.getElementById('contactModal').style.display='flex';return false;">Contact</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.1</span>
+  <span style="color:#475569">v1.15.2</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -382,6 +382,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.2</span></h4>
+        <ul>
+          <li>Fixed North American timezone labels: Eastern now shows EDT (summer time) and matches the venue clocks, picking it no longer puts US/Canada times an hour out</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.1</span></h4>
         <ul>
@@ -605,11 +611,11 @@ var TIMEZONES = [
   {o:-10,l:'(UTC−10) HST · Honolulu'},
   {o:-9.5,l:'(UTC−9:30) MART · Marquesas'},
   {o:-9,l:'(UTC−9) AKST · Anchorage'},
-  {o:-8,l:'(UTC−8) PT · Los Angeles, Vancouver'},
-  {o:-7,l:'(UTC−7) MT · Denver, Phoenix'},
-  {o:-6,l:'(UTC−6) CT · Chicago, Mexico City'},
-  {o:-5,l:'(UTC−5) ET · New York, Toronto'},
-  {o:-4,l:'(UTC−4) AT · Santiago, Halifax'},
+  {o:-8,l:'(UTC−8) AKDT · Anchorage'},
+  {o:-7,l:'(UTC−7) PDT · Los Angeles, Vancouver, Seattle'},
+  {o:-6,l:'(UTC−6) CST · Mexico City · MDT Denver'},
+  {o:-5,l:'(UTC−5) CDT · Chicago, Dallas, Houston'},
+  {o:-4,l:'(UTC−4) EDT · New York, Toronto, Miami'},
   {o:-3.5,l:'(UTC−3:30) NT · St. John\u2019s'},
   {o:-3,l:'(UTC−3) BRT · São Paulo, Buenos Aires'},
   {o:-2,l:'(UTC−2) FNT · Fernando de Noronha'},
@@ -666,8 +672,8 @@ var VENUE_TZ = {
 
 /* abbreviation for the user's selected offset (best-effort) */
 var USER_TZ_ABBR = {
-  '-12':'AoE','-11':'SST','-10':'HST','-9.5':'MART','-9':'AKDT','-8':'PST','-7':'MST','-6':'CST',
-  '-5':'EST','-4':'AST','-3.5':'NDT','-3':'ART','-2':'FNT','-1':'AZOT','0':'GMT','1':'CET','2':'EET',
+  '-12':'AoE','-11':'SST','-10':'HST','-9.5':'MART','-9':'AKST','-8':'AKDT','-7':'PDT','-6':'CST',
+  '-5':'CDT','-4':'EDT','-3.5':'NDT','-3':'ART','-2':'FNT','-1':'AZOT','0':'GMT','1':'CET','2':'EET',
   '3':'MSK','3.5':'IRST','4':'GST','4.5':'AFT','5':'PKT','5.5':'IST','5.75':'NPT','6':'BST','6.5':'MMT',
   '7':'ICT','8':'SGT','8.75':'CWST','9':'JST','9.5':'ACST','10':'AEST','10.5':'LHST','11':'NCT',
   '12':'NZST','12.75':'CHAST','13':'TOT','14':'LINT'
