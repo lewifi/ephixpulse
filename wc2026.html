@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>World Cup 2026 Schedule &amp; Calendar — Every Match in Your Timezone | EPHIX</title>
-<meta name="description" content="The complete FIFA World Cup 2026 schedule. All 104 matches in your own timezone, one-tap add to Google Calendar with reminders, live group tables, and favourite-team filters. Never miss a match.">
-<link rel="canonical" href="https://ephix.net/wc2026.html">
+<meta name="description" content="The complete FIFA World Cup 2026 schedule. All 104 matches in your own timezone, one-tap add to Google Calendar, live group tables, official team squads, and favourite-team filters. Never miss a match.">
+<link rel="canonical" href="https://ephix.net/wc2026">
 <meta name="theme-color" content="#2196F3">
 
 <!-- Favicons -->
@@ -19,7 +19,7 @@
 <meta property="og:site_name" content="EPHIX">
 <meta property="og:title" content="World Cup 2026 Schedule — Every Match in Your Timezone">
 <meta property="og:description" content="All 104 matches in your timezone, one-tap add to Google Calendar, live group tables and favourite-team filters. Never miss a match.">
-<meta property="og:url" content="https://ephix.net/wc2026.html">
+<meta property="og:url" content="https://ephix.net/wc2026">
 <meta property="og:image" content="https://ephix.net/wc-og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -44,8 +44,8 @@
     {"@type": "Country", "name": "Canada"},
     {"@type": "Country", "name": "Mexico"}
   ],
-  "description": "Complete FIFA World Cup 2026 match schedule with all 104 fixtures, kick-off times in your local timezone, and add-to-calendar reminders.",
-  "url": "https://ephix.net/wc2026.html"
+  "description": "Complete FIFA World Cup 2026 match schedule with all 104 fixtures, kick-off times in your local timezone, one-tap add to calendar, and official team squads.",
+  "url": "https://ephix.net/wc2026"
 }
 </script>
 <style>
@@ -374,7 +374,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="#" onclick="document.getElementById('contactModal').style.display='flex';return false;">Contact</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.0</span>
+  <span style="color:#475569">v1.15.1</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -382,6 +382,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.1</span></h4>
+        <ul>
+          <li>Search and link-sharing fixes (canonical URL now matches the live address)</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.0</span></h4>
         <ul>
@@ -952,7 +958,7 @@ function init(){
   document.getElementById('dlBtn').onclick = download;
   var shareBtn = document.getElementById('shareBtn');
   if (shareBtn) shareBtn.onclick = function(){
-    var url = 'https://ephix.net/wc2026.html';
+    var url = 'https://ephix.net/wc2026';
     var title = 'World Cup 2026 Schedule — every match in your timezone';
     var text = 'Full World Cup 2026 schedule, in your timezone, with add-to-calendar reminders:';
     if (navigator.share){
