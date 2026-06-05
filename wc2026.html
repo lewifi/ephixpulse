@@ -150,6 +150,22 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .pill-btn { background: #1a1f2e; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
 .pill-btn:hover { border-color: #64748b; color: #f1f5f9; }
 .toolbar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 12px 16px; }
+.cd-hero { margin: 14px clamp(12px,4vw,40px) 2px; padding: 18px 18px 16px; background: linear-gradient(135deg,#0c2a4a 0%,#10243a 55%,#0d1520 100%); border: 1px solid #234766; border-radius: 14px; text-align: center; }
+.cd-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 12px; }
+.cd-timer { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.cd-timer:empty { display: none; }
+.cd-seg { display: flex; flex-direction: column; align-items: center; min-width: 58px; padding: 9px 4px; background: rgba(255,255,255,0.05); border: 1px solid #1e2d3d; border-radius: 10px; }
+.cd-seg b { font-size: 30px; font-weight: 800; line-height: 1; color: #f1f5f9; font-variant-numeric: tabular-nums; }
+.cd-seg i { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; font-style: normal; margin-top: 5px; }
+.cd-match { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+.cd-meta { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+.cd-hero.live { background: linear-gradient(135deg,#3a0f17 0%,#2a1020 55%,#0d1520 100%); border-color: #ef4444; }
+.cd-hero.live .cd-label { color: #ff6b6b; }
+.cd-hero.live .cd-match { font-size: 22px; }
+.mstat { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; vertical-align: middle; }
+.mstat.live { background: #ef4444; color: #fff; }
+.mstat.ft { background: #1e2d3d; color: #94a3b8; }
+.mstat.soon { background: rgba(33,150,243,0.18); color: #7cc0f5; }
 .cal-opts { display: flex; flex-direction: column; gap: 8px; }
 .cal-opts .pill-btn { text-align: center; }
 .cal-hint { font-size: 11px; color: #475569; margin: 14px 0 0; line-height: 1.45; text-align: center; }
@@ -308,6 +324,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 </div>
 
 <div id="matchView">
+  <div id="cdHero" class="cd-hero" style="display:none">
+    <div class="cd-label" id="cdLabel"></div>
+    <div class="cd-timer" id="cdTimer"></div>
+    <div class="cd-match" id="cdMatch"></div>
+    <div class="cd-meta" id="cdMeta"></div>
+  </div>
   <div class="toolbar">
     <button class="pill-btn" id="calBtn" onclick="document.getElementById('calModal').style.display='flex';return false;">📅 Add to calendar</button>
     <button class="pill-btn" id="watchBtn">📺 Broadcasters</button>
@@ -374,7 +396,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="#" onclick="document.getElementById('contactModal').style.display='flex';return false;">Contact</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.2</span>
+  <span style="color:#475569">v1.15.4</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -382,6 +404,13 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.4</span></h4>
+        <ul>
+          <li>Added a live countdown to the opening match that switches to "LIVE NOW" during games and "Next match" between them</li>
+          <li>Each match row now shows a status pill: a countdown when it is within the day, LIVE during play, FT once finished</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.2</span></h4>
         <ul>
@@ -818,7 +847,7 @@ function renderList(){
       }
       html += '<div class="card' + (fav ? ' fav' : '') + '">' +
         '<div class="dot" style="background:' + col + '"></div>' +
-        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + '</div>' +
+        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + '<span class="mstat" data-ko="' + getUTC(m).getTime() + '"></span></div>' +
         '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + ', ' + fmtDay(it.local) + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
         '<div class="addbtns">' +
           '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
@@ -829,6 +858,7 @@ function renderList(){
     html += '</div>';
   });
   document.getElementById('list').innerHTML = html;
+  refreshStatuses();
   // delegate per-match ICS downloads
   var listEl = document.getElementById('list');
   var btns = listEl.querySelectorAll('.icsbtn');
@@ -955,11 +985,71 @@ function showTab(which){
 }
 
 /* ---------- INIT ---------- */
+/* Opening-match countdown / live hero */
+function cdNextInfo(){
+  var now = Date.now(), LIVE_MS = 150 * 60 * 1000;
+  var live = null, liveCount = 0, next = null;
+  for (var i = 0; i < MATCHES.length; i++){
+    var ko = getUTC(MATCHES[i]).getTime();
+    if (now >= ko && now < ko + LIVE_MS){ if (!live) live = MATCHES[i]; liveCount++; }
+    else if (ko > now && !next){ next = MATCHES[i]; }
+  }
+  return { now: now, live: live, liveCount: liveCount, next: next };
+}
+function cdSegs(ms){
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var d = Math.floor(s / 86400); s -= d * 86400;
+  var h = Math.floor(s / 3600);  s -= h * 3600;
+  var m = Math.floor(s / 60);    s -= m * 60;
+  return [{n:d,l:'days'},{n:h,l:'hrs'},{n:m,l:'min'},{n:s,l:'sec'}];
+}
+function renderCountdown(){
+  var hero = document.getElementById('cdHero'); if (!hero) return;
+  var info = cdNextInfo();
+  if (!info.live && !info.next){ hero.style.display = 'none'; return; }
+  hero.style.display = 'block';
+  var labelEl = document.getElementById('cdLabel'), timerEl = document.getElementById('cdTimer'),
+      matchEl = document.getElementById('cdMatch'), metaEl = document.getElementById('cdMeta');
+  if (info.live){
+    hero.classList.add('live');
+    labelEl.textContent = info.liveCount > 1 ? ('\u25CF LIVE NOW \u00B7 ' + info.liveCount + ' matches on') : '\u25CF LIVE NOW';
+    timerEl.innerHTML = '';
+    matchEl.textContent = info.live.teams;
+    metaEl.textContent = info.live.stage + ' \u00B7 ' + info.live.venue;
+    return;
+  }
+  hero.classList.remove('live');
+  var m = info.next, ko = getUTC(m).getTime();
+  labelEl.textContent = (m === MATCHES[0]) ? 'The tournament kicks off in' : 'Next match in';
+  timerEl.innerHTML = cdSegs(ko - info.now).filter(function(seg){ return !(seg.l === 'days' && seg.n === 0); })
+    .map(function(seg){ return '<span class="cd-seg"><b>' + pad(seg.n) + '</b><i>' + seg.l + '</i></span>'; }).join('');
+  matchEl.textContent = m.teams;
+  var tz = (typeof state !== 'undefined' && typeof state.tz === 'number') ? state.tz : 0;
+  var loc = toLocal(getUTC(m), tz);
+  var ab = (typeof USER_TZ_ABBR !== 'undefined' && USER_TZ_ABBR[String(tz)]) ? (' ' + USER_TZ_ABBR[String(tz)]) : '';
+  metaEl.textContent = fmtDate(loc) + ' \u00B7 ' + fmtTime(loc) + ab + ' \u00B7 ' + m.venue;
+}
+var cdTimer = null;
+function refreshStatuses(){
+  var now = Date.now(), LIVE_MS = 150 * 60 * 1000;
+  var els = document.querySelectorAll('.mstat[data-ko]');
+  for (var i = 0; i < els.length; i++){
+    var el = els[i], ko = parseInt(el.getAttribute('data-ko'), 10), cls = '', txt = '';
+    if (now >= ko && now < ko + LIVE_MS){ cls = 'live'; txt = '\u25CF LIVE'; }
+    else if (now >= ko + LIVE_MS){ cls = 'ft'; txt = 'FT'; }
+    else { var diff = ko - now; if (diff < 18 * 3600000){ var hh = Math.floor(diff/3600000), mm = Math.floor((diff%3600000)/60000); cls = 'soon'; txt = 'in ' + (hh>0 ? hh+'h ' : '') + mm + 'm'; } }
+    el.className = 'mstat' + (cls ? (' ' + cls) : '');
+    el.textContent = txt;
+    el.style.display = txt ? '' : 'none';
+  }
+}
+function startCountdown(){ renderCountdown(); if (cdTimer) clearInterval(cdTimer); cdTimer = setInterval(renderCountdown, 1000); setInterval(refreshStatuses, 30000); }
+
 function init(){
   var sel = document.getElementById('tzSelect');
   TIMEZONES.forEach(function(t){ var o = document.createElement('option'); o.value = t.o; o.textContent = t.l; sel.appendChild(o); });
   sel.value = String(state.tz);
-  sel.onchange = function(){ state.tz = parseFloat(sel.value); LS.set('wc_tz', state.tz); renderList(); };
+  sel.onchange = function(){ state.tz = parseFloat(sel.value); LS.set('wc_tz', state.tz); renderList(); renderCountdown(); };
 
   document.getElementById('dlBtn').onclick = download;
   var shareBtn = document.getElementById('shareBtn');
@@ -989,6 +1079,7 @@ function init(){
   document.getElementById('tabGroups').onclick = function(){ showTab('groups'); };
 
   renderFilters(); renderFavBar(); renderGroups(); renderList();
+  startCountdown();
   fetchLive();
 }
 
