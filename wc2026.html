@@ -396,7 +396,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="#" onclick="document.getElementById('contactModal').style.display='flex';return false;">Contact</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.4</span>
+  <span style="color:#475569">v1.15.5</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -404,6 +404,13 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.5</span></h4>
+        <ul>
+          <li>Fixed European timezones for summer daylight saving: London is now BST (UTC+1), Central Europe CEST (UTC+2), Eastern Europe EEST (UTC+3)</li>
+          <li>St. John's now shows NDT (UTC−2:30) for summer; other DST zones (North America, southern hemisphere) audited and correct</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.4</span></h4>
         <ul>
@@ -645,14 +652,14 @@ var TIMEZONES = [
   {o:-6,l:'(UTC−6) CST · Mexico City · MDT Denver'},
   {o:-5,l:'(UTC−5) CDT · Chicago, Dallas, Houston'},
   {o:-4,l:'(UTC−4) EDT · New York, Toronto, Miami'},
-  {o:-3.5,l:'(UTC−3:30) NT · St. John\u2019s'},
+  {o:-2.5,l:'(UTC−2:30) NDT · St. John\u2019s'},
   {o:-3,l:'(UTC−3) BRT · São Paulo, Buenos Aires'},
   {o:-2,l:'(UTC−2) FNT · Fernando de Noronha'},
   {o:-1,l:'(UTC−1) AZOT · Azores'},
-  {o:0,l:'(UTC+0) GMT · London, Lisbon'},
-  {o:1,l:'(UTC+1) CET · Paris, Berlin, Madrid'},
-  {o:2,l:'(UTC+2) EET · Cairo, Athens, Joburg'},
-  {o:3,l:'(UTC+3) MSK · Moscow, Nairobi, Riyadh'},
+  {o:0,l:'(UTC+0) GMT · Reykjavik, Accra'},
+  {o:1,l:'(UTC+1) BST · London, Dublin, Lisbon'},
+  {o:2,l:'(UTC+2) CEST · Paris, Berlin, Madrid'},
+  {o:3,l:'(UTC+3) EEST · Athens, Helsinki · MSK Moscow'},
   {o:3.5,l:'(UTC+3:30) IRST · Tehran'},
   {o:4,l:'(UTC+4) GST · Dubai, Baku'},
   {o:4.5,l:'(UTC+4:30) AFT · Kabul'},
@@ -702,8 +709,8 @@ var VENUE_TZ = {
 /* abbreviation for the user's selected offset (best-effort) */
 var USER_TZ_ABBR = {
   '-12':'AoE','-11':'SST','-10':'HST','-9.5':'MART','-9':'AKST','-8':'AKDT','-7':'PDT','-6':'CST',
-  '-5':'CDT','-4':'EDT','-3.5':'NDT','-3':'ART','-2':'FNT','-1':'AZOT','0':'GMT','1':'CET','2':'EET',
-  '3':'MSK','3.5':'IRST','4':'GST','4.5':'AFT','5':'PKT','5.5':'IST','5.75':'NPT','6':'BST','6.5':'MMT',
+  '-5':'CDT','-4':'EDT','-2.5':'NDT','-3':'ART','-2':'FNT','-1':'AZOT','0':'GMT','1':'BST','2':'CEST',
+  '3':'EEST','3.5':'IRST','4':'GST','4.5':'AFT','5':'PKT','5.5':'IST','5.75':'NPT','6':'BDT','6.5':'MMT',
   '7':'ICT','8':'SGT','8.75':'CWST','9':'JST','9.5':'ACST','10':'AEST','10.5':'LHST','11':'NCT',
   '12':'NZST','12.75':'CHAST','13':'TOT','14':'LINT'
 };
