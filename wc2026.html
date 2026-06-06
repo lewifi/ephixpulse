@@ -243,6 +243,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .icsbtn { background: #1e2d3d; color: #cbd5e1; border: 1px solid #475569; border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; text-align: center; }
 .icsbtn:hover { border-color: #94a3b8; color: #f1f5f9; }
 .gcal:hover { background: #25467a; }
+.sharebtn { background: #14233a; color: #7dd3fc; border: 1px solid #2563eb; border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; text-align: center; }
+.sharebtn:hover { background: #1b3050; color: #f1f5f9; }
 .empty { text-align: center; color: #475569; padding: 40px 20px; font-size: 14px; }
 
 /* group tables */
@@ -398,7 +400,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.6</span>
+  <span style="color:#475569">v1.15.7</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -406,6 +408,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.7</span></h4>
+        <ul>
+          <li>Share any match as a story image — flags, kick-off in your time and the venue's, group and a live countdown</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.6</span></h4>
         <ul>
@@ -828,6 +836,97 @@ function download(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+
+/* ---------- SHARE: per-match story card (1080x1920) ---------- */
+var FLAG_CODE = {
+  'Mexico':'mx','South Africa':'za','South Korea':'kr','Czechia':'cz','Canada':'ca','Bosnia & Herz.':'ba',
+  'USA':'us','Paraguay':'py','Qatar':'qa','Switzerland':'ch','Brazil':'br','Morocco':'ma','Haiti':'ht',
+  'Scotland':'gb-sct','Australia':'au','Türkiye':'tr','Germany':'de','Curaçao':'cw','Netherlands':'nl',
+  'Japan':'jp','Ivory Coast':'ci','Ecuador':'ec','Tunisia':'tn','Sweden':'se','Spain':'es','Cape Verde':'cv',
+  'Belgium':'be','Egypt':'eg','Saudi Arabia':'sa','Uruguay':'uy','Iran':'ir','New Zealand':'nz','France':'fr',
+  'Senegal':'sn','Norway':'no','Iraq':'iq','Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+  'Portugal':'pt','DR Congo':'cd','England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa',
+  'Uzbekistan':'uz','Colombia':'co','Italy':'it','Wales':'gb-wls','Nigeria':'ng','Poland':'pl','Denmark':'dk',
+  'Serbia':'rs','Peru':'pe','Chile':'cl','Costa Rica':'cr','Jamaica':'jm'
+};
+function flagUrl(name){ var c = FLAG_CODE[String(name).trim()]; return c ? 'https://flagcdn.com/w320/' + c + '.png' : null; }
+function monogram(name){ return String(name).replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || '?'; }
+function loadImg(url){ return new Promise(function(res){ if(!url){res(null);return;} var img=new Image(); img.crossOrigin='anonymous'; img.onload=function(){res(img);}; img.onerror=function(){res(null);}; img.src=url; }); }
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function glow(ctx,x,y,r,color){ var g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,color); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,1080,1920); }
+function spaced(ctx,text,cx,y,font,color,sp){ ctx.font=font; ctx.fillStyle=color; ctx.textBaseline='middle'; var ws=[],t=0,i; for(i=0;i<text.length;i++){var w=ctx.measureText(text[i]).width; ws.push(w); t+=w+sp;} t-=sp; var x=cx-t/2; ctx.textAlign='left'; for(i=0;i<text.length;i++){ ctx.fillText(text[i],x,y); x+=ws[i]+sp; } }
+function bigName(ctx,name,cx,y){ var size=72; ctx.fillStyle='#f1f5f9'; ctx.textAlign='center'; ctx.textBaseline='middle'; do{ ctx.font='800 '+size+'px "Helvetica Neue",Arial,sans-serif'; if(ctx.measureText(name).width<=960) break; size-=4; }while(size>38); ctx.fillText(name,cx,y); }
+function flagBox(ctx,img,cx,cy,boxW,boxH,name){
+  if(img){ var ar=img.width/img.height,w=boxW,h=w/ar; if(h>boxH){h=boxH;w=h*ar;} var x=cx-w/2,y=cy-h/2;
+    ctx.save(); rr(ctx,x,y,w,h,10); ctx.clip(); ctx.drawImage(img,x,y,w,h); ctx.restore();
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(255,255,255,0.22)'; rr(ctx,x,y,w,h,10); ctx.stroke();
+  } else { var r=boxH/2; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle='#16202e'; ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.stroke();
+    ctx.fillStyle='#cfe3f5'; ctx.font='800 '+Math.round(r*0.62)+'px "Helvetica Neue",Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(monogram(name),cx,cy); }
+}
+function block(ctx,cx,y,label,value){
+  spaced(ctx,label,cx,y,'600 22px "Helvetica Neue",Arial,sans-serif','#7aa7d6',5);
+  ctx.fillStyle='#e8eef5'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var size=42; do{ ctx.font='700 '+size+'px "Helvetica Neue",Arial,sans-serif'; if(ctx.measureText(value).width<=940) break; size-=3; }while(size>24);
+  ctx.fillText(value,cx,y+46);
+}
+async function buildMatchCard(m){
+  var W=1080,H=1920,cx=W/2;
+  var c=document.createElement('canvas'); c.width=W; c.height=H; var ctx=c.getContext('2d');
+  ctx.fillStyle='#0a0e15'; ctx.fillRect(0,0,W,H);
+  glow(ctx,cx,330,720,'rgba(33,150,243,0.30)');
+  glow(ctx,170,1150,640,'rgba(14,124,134,0.20)');
+  glow(ctx,930,1560,700,'rgba(99,60,160,0.20)');
+  ctx.fillStyle='#070b11'; ctx.globalAlpha=0.0; ctx.globalAlpha=1;
+  // wordmark
+  ctx.font='800 54px "Helvetica Neue",Arial,sans-serif'; ctx.textBaseline='middle';
+  var a='EPHIX ',b='PULSE',wa=ctx.measureText(a).width,wb=ctx.measureText(b).width,x0=cx-(wa+wb)/2;
+  ctx.textAlign='left'; ctx.fillStyle='#f1f5f9'; ctx.fillText(a,x0,150); ctx.fillStyle='#5eb1ff'; ctx.fillText(b,x0+wa,150);
+  spaced(ctx,'FIFA WORLD CUP 2026',cx,200,'600 24px "Helvetica Neue",Arial,sans-serif','#7aa7d6',6);
+  // teams
+  var t=matchTeams(m),A=(t[0]||m.teams),B=(t[1]||'');
+  var imgA=await loadImg(flagUrl(A)), imgB=await loadImg(flagUrl(B));
+  flagBox(ctx,imgA,cx,380,300,200,A); bigName(ctx,A,cx,548);
+  ctx.strokeStyle='rgba(148,163,184,0.4)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx-150,640); ctx.lineTo(cx-58,640); ctx.moveTo(cx+58,640); ctx.lineTo(cx+150,640); ctx.stroke();
+  ctx.fillStyle='#5eb1ff'; ctx.font='800 40px "Helvetica Neue",Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('VS',cx,640);
+  bigName(ctx,B,cx,732); flagBox(ctx,imgB,cx,900,300,200,B);
+  // times
+  ctx.strokeStyle='rgba(148,163,184,0.16)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(140,1040); ctx.lineTo(940,1040); ctx.stroke();
+  var utc=getUTC(m), loc=toLocal(utc,state.tz), ab=USER_TZ_ABBR[String(state.tz)]||'';
+  var vtz=VENUE_TZ[m.venue], vLocal=vtz?toLocal(utc,vtz.o):null;
+  block(ctx,cx,1110,'YOUR TIME', fmtDate(loc) + '  ·  ' + fmtTime(loc) + (ab?' '+ab:''));
+  block(ctx,cx,1240,'VENUE', m.venue + (vtz ? '  ·  ' + fmtTime(vLocal) + ' ' + vtz.abbr : ''));
+  // group/stage pill
+  var pill=((m.group?('GROUP '+m.group):'') + (m.group?'  ·  ':'') + String(m.stage).toUpperCase());
+  ctx.font='700 26px "Helvetica Neue",Arial,sans-serif'; var pw=ctx.measureText(pill).width, bw=pw+56, px=cx-bw/2, py=1370;
+  rr(ctx,px,py,bw,58,8); ctx.fillStyle='rgba(33,150,243,0.16)'; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(94,177,255,0.5)'; ctx.stroke();
+  ctx.fillStyle='#bcdcff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(pill,cx,py+29);
+  // countdown
+  var ms=utc.getTime()-Date.now(), cd;
+  if(ms>0){ var d=Math.floor(ms/86400000); if(d>=1){cd='KICKS OFF IN '+d+' DAY'+(d>1?'S':'');} else {var h=Math.floor(ms/3600000),mn=Math.floor((ms%3600000)/60000); cd='KICKS OFF IN '+h+'H '+mn+'M';} }
+  else if(ms>-9000000){ cd='LIVE NOW'; } else { cd='FULL TIME'; }
+  spaced(ctx,cd,cx,1490,'800 34px "Helvetica Neue",Arial,sans-serif','#5eb1ff',2);
+  // footer
+  spaced(ctx,'EVERY MATCH IN YOUR TIME',cx,1800,'600 22px "Helvetica Neue",Arial,sans-serif','#5b6b7e',4);
+  ctx.fillStyle='#8fb6e0'; ctx.font='700 30px "Helvetica Neue",Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('ephix.net/wc2026',cx,1850);
+  return c;
+}
+function safeImg(m){ return 'WC2026_' + m.teams.replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'') + '.png'; }
+async function shareMatch(idx){
+  var m=MATCHES[idx]; if(!m) return;
+  try{
+    var canvas=await buildMatchCard(m);
+    canvas.toBlob(function(blob){
+      if(!blob) return;
+      var file=new File([blob], safeImg(m), {type:'image/png'});
+      var doDownload=function(){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=safeImg(m); document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); },120); };
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], title:'WC2026: '+m.teams, text:m.teams+' — '+m.stage}).catch(function(e){ if(e && e.name==='AbortError') return; doDownload(); });
+      } else { doDownload(); }
+    }, 'image/png');
+  }catch(e){ console.error('share card failed', e); }
+}
+
 /* ---------- RENDER: MATCHES ---------- */
 function renderList(){
   var matches = state.stage === 'All' ? MATCHES : MATCHES.filter(function(m){ return m.stage === state.stage; });
@@ -867,6 +966,7 @@ function renderList(){
         '<div class="addbtns">' +
           '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
           '<button class="icsbtn" data-idx="' + it.idx + '">+ ICS</button>' +
+          '<button class="sharebtn" data-idx="' + it.idx + '">Share</button>' +
         '</div>' +
         '</div>';
     });
@@ -879,6 +979,10 @@ function renderList(){
   var btns = listEl.querySelectorAll('.icsbtn');
   for (var b = 0; b < btns.length; b++){
     btns[b].onclick = function(){ downloadMatch(parseInt(this.getAttribute('data-idx'), 10)); };
+  }
+  var sbtns = listEl.querySelectorAll('.sharebtn');
+  for (var sB = 0; sB < sbtns.length; sB++){
+    sbtns[sB].onclick = function(){ shareMatch(parseInt(this.getAttribute('data-idx'), 10)); };
   }
 }
 
