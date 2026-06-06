@@ -90,7 +90,7 @@ async function run(env) {
     badge: fresh.length,                       // app-icon count; app clears to 0 on open
     data: deepLink ? { url: deepLink } : {},
   }));
-
+  console.log('run: tokens=', tokens.length, 'fresh=', fresh.length);
   for (let i = 0; i < messages.length; i += 100) {
     await fetch(EXPO_PUSH, {
       method: 'POST',
@@ -98,4 +98,6 @@ async function run(env) {
       body: JSON.stringify(messages.slice(i, i + 100)),
     }).catch(() => {});
   }
+  // ...after the Expo POST loop:
+  console.log('expo push sent for', messages.length, 'tokens');
 }
