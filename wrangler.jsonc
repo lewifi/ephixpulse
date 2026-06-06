@@ -1,0 +1,14 @@
+{
+  "name": "ephixpulse-cron",
+  "compatibility_date": "2026-06-06",
+  "main": "push/push-cron-worker.js",
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PUSH_KV",
+      "id": "9c086a77f4a9461b85e58bcf0f493430"
+    }
+  ]
+}
