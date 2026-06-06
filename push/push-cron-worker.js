@@ -78,12 +78,17 @@ async function run(env) {
 
   // 4. all tokens, send in chunks of 100
   const tokens = (await supa('push_tokens?select=token')) || [];
+  // Tapping the push deep-links to the title when there's exactly one new entry;
+  // otherwise it just opens the app (the in-app "New in Top 25" rail shows them all).
+  const deepLink = fresh.length === 1 ? `/title/${fresh[0].media_type}/${fresh[0].tmdb_id}` : undefined;
   const messages = tokens.map((t) => ({
     to: t.token,
     title: 'New in the Top 25',
     body,
     sound: 'default',
     channelId: 'default',
+    badge: fresh.length,                       // app-icon count; app clears to 0 on open
+    data: deepLink ? { url: deepLink } : {},
   }));
 
   for (let i = 0; i < messages.length; i += 100) {
