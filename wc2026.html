@@ -400,7 +400,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.7</span>
+  <span style="color:#475569">v1.15.8</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -408,6 +408,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.8</span></h4>
+        <ul>
+          <li>Renamed the match share button to "Share to Story"</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.7</span></h4>
         <ul>
@@ -966,7 +972,7 @@ function renderList(){
         '<div class="addbtns">' +
           '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
           '<button class="icsbtn" data-idx="' + it.idx + '">+ ICS</button>' +
-          '<button class="sharebtn" data-idx="' + it.idx + '">Share</button>' +
+          '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>' +
         '</div>' +
         '</div>';
     });
