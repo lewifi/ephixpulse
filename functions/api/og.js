@@ -302,7 +302,7 @@ function renderPromoStrip(h, items, uris) {
     },
   }, slice.map((item, i) => h('div', {
     key: String(item.id || i),
-    style: { position: 'relative', width: `${PROMO_POSTER_W}px`, height: `${PROMO_POSTER_H}px`, flexShrink: 0 },
+    style: { position: 'relative', display: 'flex', width: `${PROMO_POSTER_W}px`, height: `${PROMO_POSTER_H}px`, flexShrink: 0 },
   }, [
     posterBox(h, uris[i], PROMO_POSTER_W, PROMO_POSTER_H, `p${i}`),
     h('div', {
