@@ -2,6 +2,7 @@
 //
 // Routes:
 //   /api/og                       → homepage card        (this file's onRequest)
+//   /api/og/promo                 → top-5 poster strip   (functions/api/og/promo.js)
 //   /api/og/movie/12345           → movie card           (functions/api/og/[type]/[id].js
 //   /api/og/tv/12345              → TV card                imports renderOG from here)
 //   /api/og?type=movie&id=12345   → still works (legacy query form, kept for any
@@ -225,6 +226,131 @@ async function homeRoot(h, key) {
   const items = (data.results || []).slice(0, 3);
   const uris = await Promise.all(items.map(it => posterDataUri(it.poster_path)));
   return renderHomeCard(h, items, uris);
+}
+
+// ─── PROMO STRIP (wc2026 CTA, etc.) ──────────────────────────────
+// Top 5 from latest pulse_snapshots when available; TMDB trending fallback.
+async function fetchTopItems(env, limit = 5) {
+  const key = env.TMDB_KEY;
+  const { SUPABASE_URL, SUPABASE_KEY } = env;
+
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const REST = `${SUPABASE_URL}/rest/v1/pulse_snapshots`;
+      const hdrs = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+      const latest = await fetch(`${REST}?select=captured_at&order=captured_at.desc&limit=1`, { headers: hdrs })
+        .then(r => (r.ok ? r.json() : null));
+      if (latest?.[0]?.captured_at) {
+        const ts = latest[0].captured_at;
+        const rows = await fetch(
+          `${REST}?captured_at=eq.${encodeURIComponent(ts)}&select=tmdb_id,media_type,title,rank&order=rank.asc&limit=${limit}`,
+          { headers: hdrs },
+        ).then(r => (r.ok ? r.json() : null));
+        if (rows?.length) {
+          const enriched = await Promise.all(rows.map(async (row) => {
+            const detail = await fetch(`${TMDB}/${row.media_type}/${row.tmdb_id}?api_key=${key}`)
+              .then(r => (r.ok ? r.json() : null));
+            return {
+              rank: row.rank,
+              title: row.title || detail?.title || detail?.name || '',
+              media_type: row.media_type,
+              id: row.tmdb_id,
+              poster_path: detail?.poster_path || null,
+            };
+          }));
+          if (enriched.length) return enriched;
+        }
+      }
+    } catch { /* fall through to TMDB */ }
+  }
+
+  const data = await fetch(`${TMDB}/trending/all/day?api_key=${key}`).then(r => r.json());
+  return (data.results || [])
+    .filter(it => it.media_type === 'movie' || it.media_type === 'tv')
+    .slice(0, limit)
+    .map((it, i) => ({
+      rank: i + 1,
+      title: it.title || it.name || '',
+      media_type: it.media_type,
+      id: it.id,
+      poster_path: it.poster_path,
+    }));
+}
+
+const PROMO_POSTER_W = 52;
+const PROMO_POSTER_H = 78;
+const PROMO_GAP = 8;
+const PROMO_PAD = 6;
+
+function promoStripSize(count) {
+  const n = Math.max(1, Math.min(count, 5));
+  return {
+    width: PROMO_PAD * 2 + n * PROMO_POSTER_W + Math.max(0, n - 1) * PROMO_GAP,
+    height: PROMO_PAD * 2 + PROMO_POSTER_H,
+  };
+}
+
+function renderPromoStrip(h, items, uris) {
+  const slice = items.slice(0, 5);
+  const { width, height } = promoStripSize(slice.length);
+
+  return h('div', {
+    style: {
+      width: `${width}px`, height: `${height}px`, display: 'flex', gap: `${PROMO_GAP}px`,
+      padding: `${PROMO_PAD}px`, alignItems: 'flex-end',
+      backgroundColor: '#0d1520',
+    },
+  }, slice.map((item, i) => h('div', {
+    key: String(item.id || i),
+    style: { position: 'relative', width: `${PROMO_POSTER_W}px`, height: `${PROMO_POSTER_H}px`, flexShrink: 0 },
+  }, [
+    posterBox(h, uris[i], PROMO_POSTER_W, PROMO_POSTER_H, `p${i}`),
+    h('div', {
+      key: 'r',
+      style: {
+        position: 'absolute', top: '3px', left: '3px',
+        fontFamily: 'Bebas Neue', fontSize: '14px', color: '#ffffff',
+        backgroundColor: 'rgba(8,10,15,0.78)', borderRadius: '3px',
+        padding: '1px 5px', lineHeight: 1.2,
+      },
+    }, String(item.rank || i + 1)),
+  ])));
+}
+
+export async function renderOGPromo(context) {
+  const { env } = context;
+  try {
+    const key = env.TMDB_KEY;
+    if (!key) {
+      return new Response(JSON.stringify({ error: 'TMDB_KEY not set' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const items = await fetchTopItems(env, 5);
+    if (!items.length) {
+      return new Response(JSON.stringify({ error: 'No trending data' }), {
+        status: 404, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const uris = await Promise.all(items.map(it => posterDataUri(it.poster_path)));
+    const fonts = await loadFonts();
+    const h = React.createElement;
+    const { width, height } = promoStripSize(items.length);
+
+    const image = new ImageResponse(renderPromoStrip(h, items, uris), { width, height, fonts });
+    return new Response(image.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=900, s-maxage=3600',
+      },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 // /api/og (homepage) — also honours the legacy ?type=&id= query form.
