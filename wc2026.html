@@ -300,17 +300,27 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .day-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 #groups.groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 #groups.groups .gtable{margin-bottom:0;}
-.bracket-hint{font-size:12px;color:#64748b;text-align:center;padding:4px 16px 14px;line-height:1.5;}
-.bwrap{overflow-x:auto;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
-.bracket{display:flex;align-items:stretch;min-width:900px;gap:6px;}
-.bcol{display:flex;flex-direction:column;flex:1;min-width:152px;}
-.blbl{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f0b429;text-align:center;padding:6px 2px;border-bottom:1px solid #1e2d3d;margin-bottom:8px;}
-.bmatches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:6px;padding:2px 0;}
-.bmatch{background:#141f2e;border:1px solid #1e2d3d;border-radius:8px;padding:8px 9px;}
-.bm-no{font-size:9px;font-weight:700;letter-spacing:.5px;color:#f0b429;text-transform:uppercase;margin-bottom:4px;}
-.bteam{font-size:12.5px;color:#f1f5f9;font-weight:600;line-height:1.4;}
-.blabel{font-size:12.5px;color:#cbd5e1;font-weight:600;line-height:1.4;}
-.bm-meta{font-size:10px;color:#64748b;margin-top:5px;line-height:1.35;}
+.kbracket{display:flex;align-items:stretch;gap:8px;padding:14px 18px 24px;max-width:1820px;margin:0 auto;}
+.kcol{display:flex;flex-direction:column;flex:1;min-width:0;}
+.kcol.final{flex:1.15;justify-content:center;}
+.klbl{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f0b429;text-align:center;padding:6px 2px;border-bottom:1px solid #1e2d3d;margin-bottom:10px;}
+.kmatches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:6px;padding:4px 0;}
+.kmatch{background:#141f2e;border:1px solid #1e2d3d;border-radius:8px;padding:7px 9px;}
+.kcol.right .kmatch{text-align:right;}
+.kmatch.final-match{border-color:#f0b429;background:rgba(240,180,41,0.08);}
+.km-no{font-size:9px;font-weight:700;letter-spacing:.5px;color:#f0b429;text-transform:uppercase;margin-bottom:4px;}
+.kteam{font-size:12.5px;color:#f1f5f9;font-weight:600;line-height:1.4;}
+.klabel{font-size:12.5px;color:#cbd5e1;font-weight:600;line-height:1.4;}
+.km-meta{font-size:10px;color:#64748b;margin-top:5px;line-height:1.35;}
+.kthird-lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;text-align:center;margin:10px 0 2px;}
+.ko-tabs{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.ko-tab{flex:0 0 auto;background:#141f2e;border:1px solid #1e2d3d;color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:.5px;padding:7px 14px;border-radius:6px;cursor:pointer;}
+.ko-tab.on{background:#f0b429;color:#0a1018;border-color:#f0b429;}
+#koMobList{padding:0 12px 10px;display:flex;flex-direction:column;gap:8px;}
+.bracket-hint{font-size:12px;color:#64748b;text-align:center;padding:4px 16px 16px;line-height:1.5;}
+#bracketDesk{display:none;}
+#bracketMob{display:block;}
+@media (min-width:1200px){ #bracketDesk{display:block;} #bracketMob{display:none;} }
 @media (max-width:640px){ .day-cards{grid-template-columns:1fr;} #groups.groups{grid-template-columns:1fr;} }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -348,7 +358,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 <div class="tabs">
   <button id="tabMatches" class="active">Matches</button>
   <button id="tabGroups">Group Tables</button>
-  <button id="tabBracket">Bracket</button>
+  <button id="tabBracket">Knockout</button>
 </div>
 
 <div id="matchView">
@@ -436,7 +446,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 </div>
 
 <div id="bracketView" style="display:none">
-  <div id="bracket"></div>
+  <div id="bracketDesk"></div>
+  <div id="bracketMob"></div>
 </div>
 
 <a href="/" class="ephix-foot">
@@ -452,7 +463,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.15</span>
+  <span style="color:#475569">v1.15.16</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -460,6 +471,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.16</span></h4>
+        <ul>
+          <li>Knockout tab now shows a two-sided bracket converging on the Final (wide screens), with round tabs on mobile</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.15</span></h4>
         <ul>
@@ -1195,33 +1212,57 @@ function closeModal(){
   renderFavBar(); renderList();
 }
 
-/* ---------- BRACKET ---------- */
+/* ---------- KNOCKOUT BRACKET ---------- */
 function renderBracket(){
-  var el = document.getElementById('bracket'); if(!el) return;
-  var rounds = [['Round of 32','Round of 32'],['Round of 16','Round of 16'],['Quarter-final','Quarter-finals'],['Semi-final','Semi-finals'],['Final','Final']];
-  var ab = USER_TZ_ABBR[String(state.tz)] || '';
-  var html = '<div class="bwrap"><div class="bracket">';
-  rounds.forEach(function(r){
-    var ms = MATCHES.filter(function(m){ return m.stage === r[0]; });
-    html += '<div class="bcol"><div class="blbl">' + r[1] + '</div><div class="bmatches">';
-    ms.forEach(function(m){
-      var local = toLocal(getUTC(m), state.tz);
-      var when = fmtDay(local) + ' \u00b7 ' + fmtTime(local) + (ab ? ' ' + ab : '');
-      var body;
-      if (m.teams.indexOf(' vs ') > -1){
-        var pr = m.teams.split(' vs ');
-        body = '<div class="bteam">' + esc(pr[0]) + '</div><div class="bteam">' + esc(pr[1]) + '</div>';
-      } else {
-        body = '<div class="blabel">' + esc(m.teams) + '</div>';
-      }
-      html += '<div class="bmatch"><div class="bm-no">M' + esc(m.match) + '</div>' + body +
-        '<div class="bm-meta">' + when + '<br>' + esc(m.venue) + '</div></div>';
-    });
-    html += '</div></div>';
-  });
-  html += '</div></div>';
-  html += '<p class="bracket-hint">Match-ups fill in as earlier rounds finish. Times shown in your selected timezone \u2014 scroll sideways to follow the bracket.</p>';
-  el.innerHTML = html;
+  var desk=document.getElementById('bracketDesk'), mob=document.getElementById('bracketMob');
+  if(!desk||!mob) return;
+  var ab=USER_TZ_ABBR[String(state.tz)]||'';
+  function byStage(st){ return MATCHES.filter(function(m){ return m.stage===st; }); }
+  function card(m, isFinal){
+    var local=toLocal(getUTC(m), state.tz);
+    var when=fmtDay(local)+' \u00b7 '+fmtTime(local)+(ab?' '+ab:'');
+    var body;
+    if(m.teams.indexOf(' vs ')>-1){ var pr=m.teams.split(' vs '); body='<div class="kteam">'+esc(pr[0])+'</div><div class="kteam">'+esc(pr[1])+'</div>'; }
+    else { body='<div class="klabel">'+esc(m.teams)+'</div>'; }
+    return '<div class="kmatch'+(isFinal?' final-match':'')+'"><div class="km-no">M'+esc(m.match)+'</div>'+body+'<div class="km-meta">'+when+'<br>'+esc(m.venue)+'</div></div>';
+  }
+  function col(matches,label,cls){
+    var h='<div class="kcol'+(cls?' '+cls:'')+'"><div class="klbl">'+label+'</div><div class="kmatches">';
+    matches.forEach(function(m){ h+=card(m,false); });
+    return h+'</div></div>';
+  }
+  var r32=byStage('Round of 32'), r16=byStage('Round of 16'), qf=byStage('Quarter-final'), sf=byStage('Semi-final'), fin=byStage('Final');
+  function byNum(arr,n){ for(var i=0;i<arr.length;i++){ if(arr[i].match===n) return arr[i]; } return null; }
+  var finalM=byNum(fin,'104')||fin[fin.length-1], thirdM=byNum(fin,'103');
+  var finalCol='<div class="kcol final"><div class="klbl">Final</div><div class="kmatches">';
+  if(finalM) finalCol+=card(finalM,true);
+  if(thirdM) finalCol+='<div class="kthird-lbl">3rd place</div>'+card(thirdM,false);
+  finalCol+='</div></div>';
+  desk.innerHTML='<div class="kbracket">'+
+    col(r32.slice(0,8),'Round of 32','left')+
+    col(r16.slice(0,4),'Round of 16','left')+
+    col(qf.slice(0,2),'Quarter-finals','left')+
+    col(sf.slice(0,1),'Semi-finals','left')+
+    finalCol+
+    col(sf.slice(1),'Semi-finals','right')+
+    col(qf.slice(2),'Quarter-finals','right')+
+    col(r16.slice(4),'Round of 16','right')+
+    col(r32.slice(8),'Round of 32','right')+
+  '</div>';
+  // mobile round tabs
+  var rounds=[['Round of 32','R32'],['Round of 16','R16'],['Quarter-final','QF'],['Semi-final','SF'],['Final','Final']];
+  var th='<div class="ko-tabs">';
+  rounds.forEach(function(r,i){ th+='<button class="ko-tab'+(i===0?' on':'')+'" data-r="'+r[0]+'">'+r[1]+'</button>'; });
+  th+='</div><div id="koMobList"></div>';
+  mob.innerHTML=th;
+  function showRound(st){
+    var list=document.getElementById('koMobList'); if(!list) return;
+    list.innerHTML=byStage(st).map(function(m){ return card(m, st==='Final' && m.match==='104'); }).join('');
+    var tb=mob.querySelectorAll('.ko-tab'); for(var i=0;i<tb.length;i++){ tb[i].classList.toggle('on', tb[i].getAttribute('data-r')===st); }
+  }
+  var tbs=mob.querySelectorAll('.ko-tab');
+  for(var i=0;i<tbs.length;i++){ tbs[i].onclick=function(){ showRound(this.getAttribute('data-r')); }; }
+  showRound('Round of 32');
 }
 
 /* ---------- TABS ---------- */
