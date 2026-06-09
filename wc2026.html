@@ -180,9 +180,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .cal-advanced summary::before { content: ''; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #64748b; flex-shrink: 0; transition: transform 0.15s ease; }
 .cal-advanced[open] summary::before { transform: rotate(180deg); }
 .cal-advanced summary:hover { color: #cbd5e1; }
-.cal-advanced ol { margin: 0; padding: 0 12px 12px 28px; font-size: 12px; color: #94a3b8; line-height: 1.55; }
-.cal-advanced li { margin-bottom: 6px; }
-.cal-advanced li:last-child { margin-bottom: 0; }
+.cal-advanced p { margin: 0; padding: 0 12px 12px; font-size: 12px; color: #94a3b8; line-height: 1.55; }
+.cal-advanced a { color: #7eb8d4; }
 .cal-hint { font-size: 11px; color: #475569; margin: 14px 0 0; line-height: 1.45; text-align: center; }
 .bcm-overlay { position: fixed; inset: 0; background: rgba(2,6,18,0.78); display: flex; align-items: flex-end; justify-content: center; z-index: 999; }
 .bcm-panel { background: #0b1220; border: 1px solid #1e293b; border-radius: 14px 14px 0 0; width: 100%; max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; }
@@ -397,13 +396,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
         </div>
         <details class="cal-advanced">
           <summary>Advanced Android setup</summary>
-          <ol>
-            <li>Copy the link above, then open <strong>Google Chrome</strong> on your phone.</li>
-            <li>Search for <strong>Google Calendar</strong> — don&rsquo;t tap the result.</li>
-            <li><strong>Long-press</strong> the main Google Calendar link and choose <strong>Preview page</strong>.</li>
-            <li>Scroll to the bottom of the preview and tap <strong>Desktop</strong>.</li>
-            <li>On the left, tap <strong>+</strong> next to Other calendars → <strong>From URL</strong>, then paste your link.</li>
-          </ol>
+          <p>Google Calendar on Android can&rsquo;t subscribe from a URL. <a href="https://play.google.com/store/apps/details?id=at.bitfire.icsdroid" target="_blank" rel="noopener noreferrer"><strong>ICSx⁵</strong></a> (or a similar calendar sync app) bypasses Google&rsquo;s broken web pipeline completely &mdash; install it, add a subscription, and paste the link above.</p>
         </details>
       </div>
       <p class="cal-hint">Download imports once. Subscribe is a live feed that updates as the bracket fills in. No alerts either way. Copy the link to add the feed in any calendar app.</p>
@@ -432,7 +425,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.10</span>
+  <span style="color:#475569">v1.15.11</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -441,9 +434,15 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <h3>Updates</h3>
     <div class="cm-log">
       <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.11</span></h4>
+        <ul>
+          <li>Advanced Android setup now points to ICSx⁵ instead of the broken Chrome/Google Calendar URL workaround</li>
+        </ul>
+      </div>
+      <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.10</span></h4>
         <ul>
-          <li>Collapsible Advanced Android setup guide in the calendar modal (Chrome desktop-preview workaround for Google Calendar subscribe)</li>
+          <li>Collapsible Advanced Android setup guide in the calendar modal</li>
         </ul>
       </div>
       <div class="cm-rel">
