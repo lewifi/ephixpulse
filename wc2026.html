@@ -168,6 +168,14 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .mstat.soon { background: rgba(33,150,243,0.18); color: #7cc0f5; }
 .cal-opts { display: flex; flex-direction: column; gap: 8px; }
 .cal-opts .pill-btn { text-align: center; }
+.cal-android { margin-top: 4px; }
+.cal-android-lbl { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-align: center; margin-bottom: 8px; }
+.cal-android-row { display: flex; align-items: stretch; gap: 8px; }
+.cal-android-url { flex: 1; min-width: 0; font-size: 12px; color: #cbd5e1; background: #111827; border: 1px solid #334155; border-radius: 8px; padding: 9px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cal-copy-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; background: #1e2d3d; color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.cal-copy-btn:hover { border-color: #94a3b8; color: #f1f5f9; }
+.cal-copy-btn.copied { border-color: #22c55e; color: #86efac; }
+.cal-copy-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 .cal-hint { font-size: 11px; color: #475569; margin: 14px 0 0; line-height: 1.45; text-align: center; }
 .bcm-overlay { position: fixed; inset: 0; background: rgba(2,6,18,0.78); display: flex; align-items: flex-end; justify-content: center; z-index: 999; }
 .bcm-panel { background: #0b1220; border: 1px solid #1e293b; border-radius: 14px 14px 0 0; width: 100%; max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; }
@@ -371,10 +379,20 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
       <h3>Add to calendar</h3>
       <div class="cal-opts">
         <button id="dlBtn" class="pill-btn dl">⬇ Download .ics (one-time)</button>
-        <a class="pill-btn" href="https://calendar.google.com/calendar/render?cid=webcal://ephix.net/wc2026.ics" target="_blank" rel="noopener noreferrer">📅 Subscribe in Google</a>
-        <a class="pill-btn" href="webcal://ephix.net/wc2026.ics">🍎 Subscribe in Apple / Outlook</a>
+        <a class="pill-btn" href="https://calendar.google.com/calendar/render?cid=webcal://ephix.net/wc2026.ics" target="_blank" rel="noopener noreferrer">📅 Subscribe on Google on Windows</a>
+        <a class="pill-btn" href="webcal://ephix.net/wc2026.ics">🍎 Subscribe in iOS/macOS</a>
+        <div class="cal-android">
+          <span class="cal-android-lbl">Copy link for Android Calendar</span>
+          <div class="cal-android-row">
+            <span class="cal-android-url" id="calAndroidUrl">https://ephix.net/wc2026.ics</span>
+            <button type="button" class="cal-copy-btn" id="calCopyBtn" title="Copy calendar link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Link
+            </button>
+          </div>
+        </div>
       </div>
-      <p class="cal-hint">Download imports once. Subscribe is a live feed that updates itself as the bracket fills in. No alerts either way. Google's mobile app adds feeds from a computer only.</p>
+      <p class="cal-hint">Download imports once. Subscribe is a live feed that updates as the bracket fills in. No alerts either way. On Android, paste the copied link into Google Calendar → Settings → Add calendar → From URL.</p>
     </div>
   </div>
 
@@ -400,7 +418,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.8</span>
+  <span style="color:#475569">v1.15.9</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -408,6 +426,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.9</span></h4>
+        <ul>
+          <li>Calendar modal: clearer labels for Google on Windows and iOS/macOS; Android users get a one-tap copy link for the live .ics feed</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.8</span></h4>
         <ul>
@@ -1177,6 +1201,19 @@ function init(){
   sel.onchange = function(){ state.tz = parseFloat(sel.value); LS.set('wc_tz', state.tz); renderList(); renderCountdown(); };
 
   document.getElementById('dlBtn').onclick = download;
+  var calCopyBtn = document.getElementById('calCopyBtn');
+  var ICS_FEED_URL = 'https://ephix.net/wc2026.ics';
+  if (calCopyBtn) calCopyBtn.onclick = function(){
+    function done(){
+      calCopyBtn.classList.add('copied');
+      var orig = calCopyBtn.innerHTML;
+      calCopyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+      setTimeout(function(){ calCopyBtn.classList.remove('copied'); calCopyBtn.innerHTML = orig; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ICS_FEED_URL).then(done).catch(function(){ window.prompt('Copy this link:', ICS_FEED_URL); });
+    } else { window.prompt('Copy this link:', ICS_FEED_URL); }
+  };
   var shareBtn = document.getElementById('shareBtn');
   if (shareBtn) shareBtn.onclick = function(){
     var url = 'https://ephix.net/wc2026';
