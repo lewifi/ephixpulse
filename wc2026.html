@@ -142,6 +142,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .dl-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .pill-btn.dl { background: #0f5132; color: #f0b429; border-color: rgba(240,180,41,0.4); }
 .pill-btn.accent { background: #1e3a5f; color: #bfdbfe; border-color: #2563eb; }
+.pill-btn.bmc { background: #1a1814; color: #c9a66b; border-color: #3d3428; font-size: 12px; }
+.pill-btn.bmc:hover { border-color: #6b5a3e; color: #e8d4b0; }
 .dlwrap .hint { font-size: 11px; color: #475569; text-align: center; margin-top: 6px; }
 .watchwrap { padding: 0 16px 12px; }
 .watch-here { font-size: 13px; color: #cbd5e1; background: #14233b; border: 1px solid #1e3a5f; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; line-height: 1.4; }
@@ -351,6 +353,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="pill-btn" id="watchBtn">📺 Broadcasters</button>
     <button class="pill-btn" id="squadBtn">📋 Squads</button>
     <button class="pill-btn accent" id="shareBtn">🔗 Share</button>
+    <a class="pill-btn bmc" href="https://buymeacoffee.com/ephixpulse" target="_blank" rel="noopener noreferrer" title="Buy me a coffee">☕ Coffee</a>
   </div>
 
   <div class="tzbar">
@@ -425,7 +428,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.11</span>
+  <span style="color:#475569">v1.15.12</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -433,6 +436,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.12</span></h4>
+        <ul>
+          <li>Buy me a coffee link in the toolbar (styled to match, no third-party widget)</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.11</span></h4>
         <ul>
