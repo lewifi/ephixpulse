@@ -297,6 +297,21 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .modal .mfoot button { flex: 1; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; }
 .modal .mfoot .clear { background: #1e2d3d; color: #94a3b8; }
 .modal .mfoot .done { background: #f0b429; color: #000; }
+.day-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+#groups.groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+#groups.groups .gtable{margin-bottom:0;}
+.bracket-hint{font-size:12px;color:#64748b;text-align:center;padding:4px 16px 14px;line-height:1.5;}
+.bwrap{overflow-x:auto;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
+.bracket{display:flex;align-items:stretch;min-width:900px;gap:6px;}
+.bcol{display:flex;flex-direction:column;flex:1;min-width:152px;}
+.blbl{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f0b429;text-align:center;padding:6px 2px;border-bottom:1px solid #1e2d3d;margin-bottom:8px;}
+.bmatches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:6px;padding:2px 0;}
+.bmatch{background:#141f2e;border:1px solid #1e2d3d;border-radius:8px;padding:8px 9px;}
+.bm-no{font-size:9px;font-weight:700;letter-spacing:.5px;color:#f0b429;text-transform:uppercase;margin-bottom:4px;}
+.bteam{font-size:12.5px;color:#f1f5f9;font-weight:600;line-height:1.4;}
+.blabel{font-size:12.5px;color:#cbd5e1;font-weight:600;line-height:1.4;}
+.bm-meta{font-size:10px;color:#64748b;margin-top:5px;line-height:1.35;}
+@media (max-width:640px){ .day-cards{grid-template-columns:1fr;} #groups.groups{grid-template-columns:1fr;} }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -333,6 +348,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 <div class="tabs">
   <button id="tabMatches" class="active">Matches</button>
   <button id="tabGroups">Group Tables</button>
+  <button id="tabBracket">Bracket</button>
 </div>
 
 <div id="matchView">
@@ -419,6 +435,10 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <div class="groups" id="groups"></div>
 </div>
 
+<div id="bracketView" style="display:none">
+  <div id="bracket"></div>
+</div>
+
 <a href="/" class="ephix-foot">
   <div class="ef-q">Enjoying the World Cup?</div>
   <div class="ef-cta">See what else the world is watching →</div>
@@ -432,7 +452,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.14</span>
+  <span style="color:#475569">v1.15.15</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -440,6 +460,13 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.15</span></h4>
+        <ul>
+          <li>New Bracket tab with the full knockout bracket (Round of 32 to the Final)</li>
+          <li>Two-column layout for matches and group tables on wider screens</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.14</span></h4>
         <ul>
@@ -1020,7 +1047,7 @@ function renderList(){
 
   var html = '';
   order.forEach(function(key){
-    html += '<div class="daygroup"><div class="daylabel">' + esc(key) + '</div>';
+    html += '<div class="daygroup"><div class="daylabel">' + esc(key) + '</div><div class="day-cards">';
     groups[key].forEach(function(it){
       var m = it.m, col = STAGE_COLOR[m.stage] || '#94a3b8', fav = isFav(m);
       var badge = m.group ? '<span class="badge-g">Grp ' + esc(m.group) + '</span>' : (m.match ? '<span class="badge-m">M' + esc(m.match) + '</span>' : '');
@@ -1044,7 +1071,7 @@ function renderList(){
         '</div>' +
         '</div>';
     });
-    html += '</div>';
+    html += '</div></div>';
   });
   document.getElementById('list').innerHTML = html;
   refreshStatuses();
@@ -1168,13 +1195,43 @@ function closeModal(){
   renderFavBar(); renderList();
 }
 
+/* ---------- BRACKET ---------- */
+function renderBracket(){
+  var el = document.getElementById('bracket'); if(!el) return;
+  var rounds = [['Round of 32','Round of 32'],['Round of 16','Round of 16'],['Quarter-final','Quarter-finals'],['Semi-final','Semi-finals'],['Final','Final']];
+  var ab = USER_TZ_ABBR[String(state.tz)] || '';
+  var html = '<div class="bwrap"><div class="bracket">';
+  rounds.forEach(function(r){
+    var ms = MATCHES.filter(function(m){ return m.stage === r[0]; });
+    html += '<div class="bcol"><div class="blbl">' + r[1] + '</div><div class="bmatches">';
+    ms.forEach(function(m){
+      var local = toLocal(getUTC(m), state.tz);
+      var when = fmtDay(local) + ' \u00b7 ' + fmtTime(local) + (ab ? ' ' + ab : '');
+      var body;
+      if (m.teams.indexOf(' vs ') > -1){
+        var pr = m.teams.split(' vs ');
+        body = '<div class="bteam">' + esc(pr[0]) + '</div><div class="bteam">' + esc(pr[1]) + '</div>';
+      } else {
+        body = '<div class="blabel">' + esc(m.teams) + '</div>';
+      }
+      html += '<div class="bmatch"><div class="bm-no">M' + esc(m.match) + '</div>' + body +
+        '<div class="bm-meta">' + when + '<br>' + esc(m.venue) + '</div></div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+  html += '<p class="bracket-hint">Match-ups fill in as earlier rounds finish. Times shown in your selected timezone \u2014 scroll sideways to follow the bracket.</p>';
+  el.innerHTML = html;
+}
+
 /* ---------- TABS ---------- */
 function showTab(which){
-  var m = which === 'matches';
-  document.getElementById('matchView').style.display = m ? '' : 'none';
-  document.getElementById('groupView').style.display = m ? 'none' : '';
-  document.getElementById('tabMatches').classList.toggle('active', m);
-  document.getElementById('tabGroups').classList.toggle('active', !m);
+  var views = { matches:'matchView', groups:'groupView', bracket:'bracketView' };
+  Object.keys(views).forEach(function(k){ var v = document.getElementById(views[k]); if(v) v.style.display = (k===which) ? '' : 'none'; });
+  document.getElementById('tabMatches').classList.toggle('active', which==='matches');
+  document.getElementById('tabGroups').classList.toggle('active', which==='groups');
+  var tb = document.getElementById('tabBracket'); if(tb) tb.classList.toggle('active', which==='bracket');
+  if(which==='bracket') renderBracket();
 }
 
 /* ---------- INIT ---------- */
@@ -1283,6 +1340,7 @@ function init(){
   document.getElementById('favModal').onclick = function(e){ if (e.target === this) closeModal(); };
   document.getElementById('tabMatches').onclick = function(){ showTab('matches'); };
   document.getElementById('tabGroups').onclick = function(){ showTab('groups'); };
+  var _tb = document.getElementById('tabBracket'); if(_tb) _tb.onclick = function(){ showTab('bracket'); };
 
   renderFilters(); renderFavBar(); renderGroups(); renderList();
   startCountdown();
