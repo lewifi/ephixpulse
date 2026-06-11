@@ -178,6 +178,10 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .mstat.ft { background: #1e2d3d; color: #94a3b8; }
 .mstat.soon { background: rgba(33,150,243,0.18); color: #7cc0f5; }
 .score { display:inline-block; margin-left:8px; font-weight:800; font-size:13px; color:#f1f5f9; font-variant-numeric:tabular-nums; vertical-align:middle; }
+.scorebox { flex-shrink:0; min-width:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; }
+.sb-teams { font-size:12px; font-weight:700; letter-spacing:1px; color:#94a3b8; }
+.sb-score { font-size:22px; font-weight:800; color:#fff; line-height:1; font-variant-numeric:tabular-nums; }
+.card.past .sb-teams { color:#8a97a6; }
 .card.past { background: rgba(255,255,255,0.012); }
 .card.past .dot { filter: grayscale(1); background:#4a5568 !important; }
 .card.past .teams { color:#7e8a99; }
@@ -476,7 +480,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.19</span>
+  <span style="color:#475569">v1.15.20</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -484,6 +488,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.20</span></h4>
+        <ul>
+          <li>Played matches now show a bold scoreline (team codes + result) where the buttons were; calendar/share hidden once a match is done</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.19</span></h4>
         <ul>
@@ -936,6 +946,16 @@ function isFav(m){
   var t = matchTeams(m);
   return t.some(function(x){ return state.favs.indexOf(x) !== -1; });
 }
+var TEAM_ABBR = {
+ 'Mexico':'MEX','South Africa':'RSA','South Korea':'KOR','Czechia':'CZE','Canada':'CAN','Bosnia & Herz.':'BIH',
+ 'USA':'USA','Paraguay':'PAR','Qatar':'QAT','Switzerland':'SUI','Brazil':'BRA','Morocco':'MAR','Haiti':'HAI',
+ 'Scotland':'SCO','Australia':'AUS','Türkiye':'TUR','Germany':'GER','Curaçao':'CUW','Netherlands':'NED',
+ 'Japan':'JPN','Ivory Coast':'CIV','Ecuador':'ECU','Tunisia':'TUN','Sweden':'SWE','Spain':'ESP','Cape Verde':'CPV',
+ 'Belgium':'BEL','Egypt':'EGY','Saudi Arabia':'KSA','Uruguay':'URU','Iran':'IRN','New Zealand':'NZL','France':'FRA',
+ 'Senegal':'SEN','Norway':'NOR','Iraq':'IRQ','Argentina':'ARG','Algeria':'ALG','Austria':'AUT','Jordan':'JOR',
+ 'Portugal':'POR','DR Congo':'COD','England':'ENG','Croatia':'CRO','Ghana':'GHA','Panama':'PAN','Uzbekistan':'UZB','Colombia':'COL'
+};
+function teamAbbr(n){ n=(n||'').trim(); if(TEAM_ABBR[n]) return TEAM_ABBR[n]; return n.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || '???'; }
 function teamsWithFlags(m){
   return esc(m.teams);
 }
@@ -1111,17 +1131,22 @@ function renderList(){
         venueStr = '<span class="venue">' + esc(m.venue) + '</span>';
       }
       var _st = matchState(m);
-      var _scoreHTML = _st.score ? '<span class="score">' + _st.score + '</span>' : '';
-      var _btns = _st.isPast
-        ? '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>'
-        : '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
+      var _parts = m.teams.split(' vs '), _right, _inlineScore = '';
+      if (_st.isPast){
+        _right = '<div class="scorebox"><div class="sb-teams">' + esc(teamAbbr(_parts[0]||'') + ' - ' + teamAbbr(_parts[1]||'')) + '</div><div class="sb-score">' + esc(_st.score || 'FT') + '</div></div>';
+      } else {
+        if (_st.score) _inlineScore = '<span class="score">' + _st.score + '</span>';
+        _right = '<div class="addbtns">' +
+          '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
           '<button class="icsbtn" data-idx="' + it.idx + '">+ ICS</button>' +
-          '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>';
+          '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>' +
+        '</div>';
+      }
       html += '<div class="card' + (fav ? ' fav' : '') + (_st.isPast ? ' past' : '') + '">' +
         '<div class="dot" style="background:' + col + '"></div>' +
-        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + _scoreHTML + '<span class="mstat" data-ko="' + getUTC(m).getTime() + '"></span></div>' +
+        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + _inlineScore + '<span class="mstat" data-ko="' + getUTC(m).getTime() + '"></span></div>' +
         '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + ', ' + fmtDay(it.local) + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
-        '<div class="addbtns">' + _btns + '</div>' +
+        _right +
         '</div>';
     });
     html += '</div></div>';
