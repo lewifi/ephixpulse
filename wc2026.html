@@ -166,6 +166,10 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .cd-seg i { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; font-style: normal; margin-top: 5px; }
 .cd-match { font-size: 18px; font-weight: 700; color: #f1f5f9; }
 .cd-meta { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+.cd-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; align-items: start; }
+.cd-cards .cd-card { min-width: 0; }
+.cd-cards .cd-card + .cd-card { position: relative; }
+.cd-when { font-size: 12px; color: #94a3b8; margin-top: 12px; }
 .cd-hero.live { background: linear-gradient(135deg,#3a0f17 0%,#2a1020 55%,#0d1520 100%); border-color: #ef4444; }
 .cd-hero.live .cd-label { color: #ff6b6b; }
 .cd-hero.live .cd-match { font-size: 22px; }
@@ -463,7 +467,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.17</span>
+  <span style="color:#475569">v1.15.18</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -471,6 +475,13 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.18</span></h4>
+        <ul>
+          <li>Countdown box now runs all tournament: live during a match, then counts down to the next (2h10m live window)</li>
+          <li>Simultaneous kick-offs show side by side in the countdown box</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.17</span></h4>
         <ul>
@@ -1028,7 +1039,7 @@ async function buildMatchCard(m){
   // countdown
   var ms=utc.getTime()-Date.now(), cd;
   if(ms>0){ var d=Math.floor(ms/86400000); if(d>=1){cd='KICKS OFF IN '+d+' DAY'+(d>1?'S':'');} else {var h=Math.floor(ms/3600000),mn=Math.floor((ms%3600000)/60000); cd='KICKS OFF IN '+h+'H '+mn+'M';} }
-  else if(ms>-9000000){ cd='LIVE NOW'; } else { cd='FULL TIME'; }
+  else if(ms>-7800000){ cd='LIVE NOW'; } else { cd='FULL TIME'; }
   spaced(ctx,cd,cx,1490,'800 34px "Helvetica Neue",Arial,sans-serif','#5eb1ff',2);
   // footer
   spaced(ctx,'EVERY MATCH IN YOUR TIME',cx,1800,'600 22px "Helvetica Neue",Arial,sans-serif','#5b6b7e',4);
@@ -1292,14 +1303,20 @@ function showTab(which){
 /* ---------- INIT ---------- */
 /* Opening-match countdown / live hero */
 function cdNextInfo(){
-  var now = Date.now(), LIVE_MS = 150 * 60 * 1000;
-  var live = null, liveCount = 0, next = null;
+  var now = Date.now(), LIVE_MS = 130 * 60 * 1000;
+  var liveMatches = [], upcoming = [];
   for (var i = 0; i < MATCHES.length; i++){
     var ko = getUTC(MATCHES[i]).getTime();
-    if (now >= ko && now < ko + LIVE_MS){ if (!live) live = MATCHES[i]; liveCount++; }
-    else if (ko > now && !next){ next = MATCHES[i]; }
+    if (now >= ko && now < ko + LIVE_MS){ liveMatches.push(MATCHES[i]); }
+    else if (ko > now){ upcoming.push({ m: MATCHES[i], ko: ko }); }
   }
-  return { now: now, live: live, liveCount: liveCount, next: next };
+  var nextMatches = [];
+  if (upcoming.length){
+    upcoming.sort(function(a,b){ return a.ko - b.ko; });
+    var minKo = upcoming[0].ko;
+    nextMatches = upcoming.filter(function(u){ return u.ko === minKo; }).map(function(u){ return u.m; });
+  }
+  return { now: now, liveMatches: liveMatches, nextMatches: nextMatches };
 }
 function cdSegs(ms){
   var s = Math.max(0, Math.floor(ms / 1000));
@@ -1311,32 +1328,34 @@ function cdSegs(ms){
 function renderCountdown(){
   var hero = document.getElementById('cdHero'); if (!hero) return;
   var info = cdNextInfo();
-  if (!info.live && !info.next){ hero.style.display = 'none'; return; }
-  hero.style.display = 'block';
-  var labelEl = document.getElementById('cdLabel'), timerEl = document.getElementById('cdTimer'),
-      matchEl = document.getElementById('cdMatch'), metaEl = document.getElementById('cdMeta');
-  if (info.live){
-    hero.classList.add('live');
-    labelEl.textContent = info.liveCount > 1 ? ('\u25CF LIVE NOW \u00B7 ' + info.liveCount + ' matches on') : '\u25CF LIVE NOW';
-    timerEl.innerHTML = '';
-    matchEl.textContent = info.live.teams;
-    metaEl.textContent = info.live.stage + ' \u00B7 ' + info.live.venue;
-    return;
-  }
-  hero.classList.remove('live');
-  var m = info.next, ko = getUTC(m).getTime();
-  labelEl.textContent = (m === MATCHES[0]) ? 'The tournament kicks off in' : 'Next match in';
-  timerEl.innerHTML = cdSegs(ko - info.now).filter(function(seg){ return !(seg.l === 'days' && seg.n === 0); })
-    .map(function(seg){ return '<span class="cd-seg"><b>' + pad(seg.n) + '</b><i>' + seg.l + '</i></span>'; }).join('');
-  matchEl.textContent = m.teams;
   var tz = (typeof state !== 'undefined' && typeof state.tz === 'number') ? state.tz : 0;
-  var loc = toLocal(getUTC(m), tz);
   var ab = (typeof USER_TZ_ABBR !== 'undefined' && USER_TZ_ABBR[String(tz)]) ? (' ' + USER_TZ_ABBR[String(tz)]) : '';
-  metaEl.textContent = fmtDate(loc) + ' \u00B7 ' + fmtTime(loc) + ab + ' \u00B7 ' + m.venue;
+  var html = '', live = false, show = true;
+  if (info.liveMatches.length){
+    live = true;
+    var n = info.liveMatches.length;
+    html = '<div class="cd-label">' + (n > 1 ? ('\u25CF LIVE NOW \u00B7 ' + n + ' matches') : '\u25CF LIVE NOW') + '</div>' +
+      '<div class="cd-cards">' + info.liveMatches.map(function(m){ return '<div class="cd-card"><div class="cd-match">' + esc(m.teams) + '</div><div class="cd-meta">' + esc(m.stage + ' \u00B7 ' + m.venue) + '</div></div>'; }).join('') + '</div>';
+  } else if (info.nextMatches.length){
+    var ms = info.nextMatches, first = ms[0], ko = getUTC(first).getTime(), n2 = ms.length;
+    var isOpen = (first === MATCHES[0]);
+    var label = isOpen ? 'The tournament kicks off in' : (n2 > 1 ? 'Next matches in' : 'Next match in');
+    var timer = cdSegs(ko - info.now).filter(function(seg){ return !(seg.l === 'days' && seg.n === 0); })
+      .map(function(seg){ return '<span class="cd-seg"><b>' + pad(seg.n) + '</b><i>' + seg.l + '</i></span>'; }).join('');
+    var loc = toLocal(getUTC(first), tz);
+    var when = fmtDate(loc) + ' \u00B7 ' + fmtTime(loc) + ab;
+    html = '<div class="cd-label">' + label + '</div><div class="cd-timer">' + timer + '</div>' +
+      '<div class="cd-cards">' + ms.map(function(m){ return '<div class="cd-card"><div class="cd-match">' + esc(m.teams) + '</div><div class="cd-meta">' + esc(m.venue) + '</div></div>'; }).join('') + '</div>' +
+      '<div class="cd-when">' + esc(when) + '</div>';
+  } else { show = false; }
+  if (!show){ hero.style.display = 'none'; hero._cdHTML = ''; return; }
+  hero.style.display = 'block';
+  hero.classList.toggle('live', live);
+  if (hero._cdHTML !== html){ hero.innerHTML = html; hero._cdHTML = html; }
 }
 var cdTimer = null;
 function refreshStatuses(){
-  var now = Date.now(), LIVE_MS = 150 * 60 * 1000;
+  var now = Date.now(), LIVE_MS = 130 * 60 * 1000;
   var els = document.querySelectorAll('.mstat[data-ko]');
   for (var i = 0; i < els.length; i++){
     var el = els[i], ko = parseInt(el.getAttribute('data-ko'), 10), cls = '', txt = '';
