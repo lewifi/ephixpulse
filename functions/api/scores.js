@@ -123,6 +123,15 @@ export async function onRequest(context) {
       totalMatches: matches.length,
       groups: computeGroups(matches),
       knockouts: computeKnockouts(matches),
+      matches: matches.map((m) => ({
+        utcDate: m.utcDate,
+        home: m.homeTeam?.name || null,
+        away: m.awayTeam?.name || null,
+        status: m.status,
+        hs: m.score?.fullTime?.home ?? null,
+        as: m.score?.fullTime?.away ?? null,
+        winner: m.score?.winner || null,
+      })),
     };
 
     return new Response(JSON.stringify(payload), {

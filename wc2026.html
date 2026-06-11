@@ -177,6 +177,15 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 .mstat.live { background: #ef4444; color: #fff; }
 .mstat.ft { background: #1e2d3d; color: #94a3b8; }
 .mstat.soon { background: rgba(33,150,243,0.18); color: #7cc0f5; }
+.score { display:inline-block; margin-left:8px; font-weight:800; font-size:13px; color:#f1f5f9; font-variant-numeric:tabular-nums; vertical-align:middle; }
+.card.past { background: rgba(255,255,255,0.012); }
+.card.past .dot { filter: grayscale(1); background:#4a5568 !important; }
+.card.past .teams { color:#7e8a99; }
+.card.past .meta, .card.past .time, .card.past .venue, .card.past .vtime { color:#5d6875 !important; }
+.card.past .score { color:#ffffff; }
+.kteam .ksc { float:right; color:#fff; font-weight:800; }
+.kcol.right .kteam .ksc { float:left; }
+.kteam.kwin { color:#f0b429; }
 .cal-opts { display: flex; flex-direction: column; gap: 8px; }
 .cal-opts .pill-btn { text-align: center; }
 .cal-link-row { display: flex; align-items: stretch; gap: 8px; margin-top: 4px; }
@@ -467,7 +476,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.18</span>
+  <span style="color:#475569">v1.15.19</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -475,6 +484,13 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.19</span></h4>
+        <ul>
+          <li>Final scores now show on played matches; past matches turn greyscale (score in white) and drop the calendar buttons</li>
+          <li>Bracket fills in with real teams and scores as knockout rounds are played</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.18</span></h4>
         <ul>
@@ -1094,15 +1110,18 @@ function renderList(){
       } else {
         venueStr = '<span class="venue">' + esc(m.venue) + '</span>';
       }
-      html += '<div class="card' + (fav ? ' fav' : '') + '">' +
-        '<div class="dot" style="background:' + col + '"></div>' +
-        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + '<span class="mstat" data-ko="' + getUTC(m).getTime() + '"></span></div>' +
-        '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + ', ' + fmtDay(it.local) + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
-        '<div class="addbtns">' +
-          '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
+      var _st = matchState(m);
+      var _scoreHTML = _st.score ? '<span class="score">' + _st.score + '</span>' : '';
+      var _btns = _st.isPast
+        ? '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>'
+        : '<a class="gcal" href="' + gcalUrl(m) + '" target="_blank" rel="noopener noreferrer">+ GCal</a>' +
           '<button class="icsbtn" data-idx="' + it.idx + '">+ ICS</button>' +
-          '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>' +
-        '</div>' +
+          '<button class="sharebtn" data-idx="' + it.idx + '">Share to Story</button>';
+      html += '<div class="card' + (fav ? ' fav' : '') + (_st.isPast ? ' past' : '') + '">' +
+        '<div class="dot" style="background:' + col + '"></div>' +
+        '<div class="info"><div class="teams">' + (fav ? '⭐ ' : '') + teamsWithFlags(m) + _scoreHTML + '<span class="mstat" data-ko="' + getUTC(m).getTime() + '"></span></div>' +
+        '<div class="meta"><span class="time">' + fmtTime(it.local) + (userAbbr ? ' ' + userAbbr : '') + ', ' + fmtDay(it.local) + '</span><span>·</span>' + venueStr + badge + '</div></div>' +
+        '<div class="addbtns">' + _btns + '</div>' +
         '</div>';
     });
     html += '</div></div>';
@@ -1238,8 +1257,12 @@ function renderBracket(){
   function card(m, isFinal){
     var local=toLocal(getUTC(m), state.tz);
     var when=fmtDay(local)+' \u00b7 '+fmtTime(local)+(ab?' '+ab:'');
-    var body;
-    if(m.teams.indexOf(' vs ')>-1){ var pr=m.teams.split(' vs '); body='<div class="kteam">'+esc(pr[0])+'</div><div class="kteam">'+esc(pr[1])+'</div>'; }
+    var body, kr=_koResult(m);
+    if(kr && kr.home && kr.away){
+      var hsc=(kr.homeScore!=null)?String(kr.homeScore):'', asc=(kr.awayScore!=null)?String(kr.awayScore):'';
+      body='<div class="kteam'+(kr.winner==='HOME_TEAM'?' kwin':'')+'">'+esc(kr.home)+'<span class="ksc">'+hsc+'</span></div>'+
+           '<div class="kteam'+(kr.winner==='AWAY_TEAM'?' kwin':'')+'">'+esc(kr.away)+'<span class="ksc">'+asc+'</span></div>';
+    } else if(m.teams.indexOf(' vs ')>-1){ var pr=m.teams.split(' vs '); body='<div class="kteam">'+esc(pr[0])+'</div><div class="kteam">'+esc(pr[1])+'</div>'; }
     else { body='<div class="klabel">'+esc(m.teams)+'</div>'; }
     return '<div class="kmatch'+(isFinal?' final-match':'')+'"><div class="km-no">M'+esc(m.match)+'</div>'+body+'<div class="km-meta">'+when+'<br>'+esc(m.venue)+'</div></div>';
   }
@@ -1422,15 +1445,52 @@ function init(){
 }
 
 /* fetch live scores/standings from the Netlify function; re-render on success */
+/* ---- live result matching (LIVE.matches from /api/scores) ---- */
+function _np(x){ return normName(x).toLowerCase().replace(/[^a-z0-9]/g,''); }
+function resultFor(m){
+  if (!LIVE || !LIVE.ok || !LIVE.matches) return null;
+  var parts = m.teams.split(' vs ');
+  if (parts.length === 2){
+    var a=_np(parts[0]), b=_np(parts[1]);
+    for (var i=0;i<LIVE.matches.length;i++){
+      var lm=LIVE.matches[i]; if(!lm.home||!lm.away) continue;
+      var h=_np(lm.home), w=_np(lm.away);
+      if ((h===a&&w===b)||(h===b&&w===a)){
+        var swap=(_np(parts[0])===w);
+        var s0=swap?lm.as:lm.hs, s1=swap?lm.hs:lm.as;
+        return { status:lm.status, s0:s0, s1:s1, hasScore:(s0!=null&&s1!=null) };
+      }
+    }
+  }
+  return null;
+}
+function _koResult(m){
+  if (!LIVE || !LIVE.ok || !LIVE.knockouts) return null;
+  var iso=getUTC(m).toISOString().slice(0,16);
+  for (var i=0;i<LIVE.knockouts.length;i++){ var k=LIVE.knockouts[i]; if(k.utcDate && k.utcDate.slice(0,16)===iso) return k; }
+  return null;
+}
+function matchState(m){
+  var now=Date.now(), ko=getUTC(m).getTime(), LIVE_MS=130*60*1000;
+  var r=resultFor(m), st={ isLive:false, isPast:false, score:null };
+  if (r){
+    if (r.status==='FINISHED'){ st.isPast=true; if(r.hasScore) st.score=r.s0+' \u2013 '+r.s1; return st; }
+    if (r.status==='IN_PLAY'||r.status==='PAUSED'||r.status==='LIVE'){ st.isLive=true; if(r.hasScore) st.score=r.s0+' \u2013 '+r.s1; return st; }
+  }
+  if (now>=ko && now<ko+LIVE_MS) st.isLive=true;
+  else if (now>=ko+LIVE_MS) st.isPast=true;
+  return st;
+}
 function fetchLive(){
   fetch('/api/scores', { headers: { 'accept': 'application/json' } })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data){
-      if (data && data.ok){ LIVE = data; renderGroups(); }
+      if (data && data.ok){ LIVE = data; renderGroups(); if (typeof renderList==='function') renderList(); var bv=document.getElementById('bracketView'); if (bv && bv.style.display!=='none' && typeof renderBracket==='function') renderBracket(); }
     })
     .catch(function(){ /* offline or function down: keep static fallback */ });
 }
 init();
+setInterval(fetchLive, 300000);
 
 /* ---- TV broadcasters by country: detected inline line + full-list modal ---- */
 (function(){
