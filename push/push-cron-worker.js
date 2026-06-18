@@ -32,15 +32,38 @@ const TOP_N = 25;
 
 export default {
   async scheduled(event, env, ctx) {
+    // Every minute: refresh World Cup scores into KV (read by /api/scores).
+    // Hourly (the original trigger): send Top-25 push notifications.
+    if (event.cron === '* * * * *') { ctx.waitUntil(pollScores(env)); return; }
     ctx.waitUntil(run(env));
   },
-  // Allow manual trigger for testing: GET /?run=1
+  // Manual triggers for testing: GET /?run=1 (push)  |  GET /?scores=1 (scores)
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.searchParams.get('run') === '1') { await run(env); return new Response('ran'); }
+    if (url.searchParams.get('scores') === '1') { const ok = await pollScores(env); return new Response('scores ' + (ok ? 'ok' : 'fail')); }
     return new Response('ephix-push worker');
   },
 };
+
+// Pull the full WC match list once per minute and stash the raw JSON in KV.
+// /api/scores reads this, so football-data is hit ~once/min total, not per visitor.
+async function pollScores(env) {
+  try {
+    const token = env.FOOTBALL_DATA_TOKEN;
+    if (!token || !env.PUSH_KV) return false;
+    const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
+      headers: { 'X-Auth-Token': token },
+    });
+    if (!res.ok) return false;
+    const raw = await res.text();
+    await env.PUSH_KV.put('scores:raw', raw, { expirationTtl: 3600 });
+    await env.PUSH_KV.put('scores:at', String(Date.now()));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 async function run(env) {
   const { SUPABASE_URL, SUPABASE_KEY, PUSH_KV } = env;
@@ -90,7 +113,7 @@ async function run(env) {
     badge: fresh.length,                       // app-icon count; app clears to 0 on open
     data: deepLink ? { url: deepLink } : {},
   }));
-  console.log('run: tokens=', tokens.length, 'fresh=', fresh.length);
+
   for (let i = 0; i < messages.length; i += 100) {
     await fetch(EXPO_PUSH, {
       method: 'POST',
@@ -98,6 +121,4 @@ async function run(env) {
       body: JSON.stringify(messages.slice(i, i + 100)),
     }).catch(() => {});
   }
-  // ...after the Expo POST loop:
-  console.log('expo push sent for', messages.length, 'tokens');
 }

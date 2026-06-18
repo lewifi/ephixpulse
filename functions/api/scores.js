@@ -4,11 +4,12 @@
 
 const API = 'https://api.football-data.org/v4';
 const COMP = 'WC'; // football-data.org code for the FIFA World Cup
-const CACHE_SECONDS = 15 * 60; // 15 min at the edge — finished scores show shortly after full time
+const CACHE_SECONDS = 30; // short edge cache; freshness comes from the 1-min KV cron
 
 async function fdFetch(path, token) {
   const res = await fetch(`${API}${path}`, {
     headers: { 'X-Auth-Token': token },
+    cf: { cacheTtl: 900, cacheEverything: true },
   });
   if (!res.ok) {
     throw new Error(`football-data ${path} -> ${res.status}`);
@@ -90,30 +91,38 @@ function computeKnockouts(matches) {
 }
 
 export async function onRequest(context) {
-  const { env } = context;
+  const { env, request } = context;
   const token = env.FOOTBALL_DATA_TOKEN;
 
-  if (!token) {
-    // Safe diagnostic: report which env var NAMES exist (never values), so we
-    // can tell "not deployed" from "wrong name / wrong scope".
-    const allNames = Object.keys(env);
-    const relevant = allNames.filter((n) => /TOKEN|FOOTBALL|DATA|KEY|API/i.test(n));
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: 'Missing FOOTBALL_DATA_TOKEN env var',
-        diagnostic: {
-          totalEnvVars: allNames.length,
-          matchingNames: relevant,
-          sawExactName: allNames.includes('FOOTBALL_DATA_TOKEN'),
-        },
-      }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    );
-  }
+  // Edge cache: Pages Functions are NOT cached by default, so do it explicitly.
+  // Serves a cached copy for CACHE_SECONDS, which keeps football-data calls to a
+  // trickle (≈ one per edge location per interval) instead of one per visitor.
+  const cache = caches.default;
+  const cacheKey = new Request(new URL(request.url).toString(), { method: 'GET' });
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
 
   try {
-    const data = await fdFetch(`/competitions/${COMP}/matches`, token);
+    // Prefer KV (written every minute by the cron worker): fast, global, and no
+    // football-data call on the request path -> immune to traffic and rate limits.
+    let data = null;
+    if (env.SCORES_KV) {
+      const raw = await env.SCORES_KV.get('scores:raw');
+      if (raw) data = JSON.parse(raw);
+    }
+    // Fallback (KV not populated yet): fetch live, which needs the token.
+    if (!data) {
+      if (!token) {
+        const allNames = Object.keys(env);
+        const relevant = allNames.filter((n) => /TOKEN|FOOTBALL|DATA|KEY|API|KV/i.test(n));
+        return new Response(JSON.stringify({
+          ok: false,
+          error: 'No cached scores in KV and missing FOOTBALL_DATA_TOKEN',
+          diagnostic: { totalEnvVars: allNames.length, matchingNames: relevant, sawKV: !!env.SCORES_KV },
+        }), { status: 500, headers: { 'content-type': 'application/json' } });
+      }
+      data = await fdFetch(`/competitions/${COMP}/matches`, token);
+    }
     const matches = data.matches || [];
 
     const payload = {
@@ -134,13 +143,15 @@ export async function onRequest(context) {
       })),
     };
 
-    return new Response(JSON.stringify(payload), {
+    const resp = new Response(JSON.stringify(payload), {
       status: 200,
       headers: {
         'content-type': 'application/json',
         'cache-control': `public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`,
       },
     });
+    context.waitUntil(cache.put(cacheKey, resp.clone()));
+    return resp;
   } catch (err) {
     return new Response(
       JSON.stringify({ ok: false, error: String(err.message || err) }),

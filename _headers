@@ -20,6 +20,3 @@
 /wc2026.ics
   Content-Type: text/calendar; charset=utf-8
   Cache-Control: public, max-age=3600
-
-/squads.json
-  Cache-Control: public, max-age=3600
