@@ -480,7 +480,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.20</span>
+  <span style="color:#475569">v1.15.21</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -488,6 +488,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.21</span></h4>
+        <ul>
+          <li>Fixed missing scores and zeroed table rows for Bosnia & Herz. and Cape Verde (team name matching is now tolerant of spelling variants)</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.20</span></h4>
         <ul>
@@ -1191,11 +1197,12 @@ function normName(n){
     'United States':'USA','South Korea':'South Korea','Republic of Korea':'South Korea',
     'IR Iran':'Iran','Iran':'Iran','Korea Republic':'South Korea',
     'Bosnia and Herzegovina':'Bosnia & Herz.','Bosnia & Herzegovina':'Bosnia & Herz.',
+    'Bosnia-Herzegovina':'Bosnia & Herz.','Bosnia Herzegovina':'Bosnia & Herz.','Bosnia & Herz.':'Bosnia & Herz.',
     'Côte d\u2019Ivoire':'Ivory Coast','Cote d\u2019Ivoire':'Ivory Coast','Ivory Coast':'Ivory Coast',
     'Turkey':'Türkiye','Türkiye':'Türkiye','Turkiye':'Türkiye',
     'Czech Republic':'Czechia','Czechia':'Czechia',
     'DR Congo':'DR Congo','Congo DR':'DR Congo','Democratic Republic of Congo':'DR Congo',
-    'Cape Verde':'Cape Verde','Cabo Verde':'Cape Verde',
+    'Cape Verde':'Cape Verde','Cabo Verde':'Cape Verde','Cape Verde Islands':'Cape Verde','Cabo Verde Islands':'Cape Verde',
     'Curacao':'Curaçao','Curaçao':'Curaçao'
   };
   if (map[n]) return map[n];
@@ -1207,7 +1214,7 @@ function liveRowFor(letter, team){
   if (!LIVE || !LIVE.ok || !LIVE.groups || !LIVE.groups[letter]) return null;
   var rows = LIVE.groups[letter];
   for (var i = 0; i < rows.length; i++){
-    if (normName(rows[i].team) === team) return rows[i];
+    if (_eq(_np(rows[i].team), _np(team))) return rows[i];
   }
   return null;
 }
@@ -1472,6 +1479,7 @@ function init(){
 /* fetch live scores/standings from the Netlify function; re-render on success */
 /* ---- live result matching (LIVE.matches from /api/scores) ---- */
 function _np(x){ return normName(x).toLowerCase().replace(/[^a-z0-9]/g,''); }
+function _eq(a,b){ if(!a||!b) return false; if(a===b) return true; if(a.length>=7&&b.indexOf(a)===0) return true; if(b.length>=7&&a.indexOf(b)===0) return true; return false; }
 function resultFor(m){
   if (!LIVE || !LIVE.ok || !LIVE.matches) return null;
   var parts = m.teams.split(' vs ');
@@ -1480,8 +1488,8 @@ function resultFor(m){
     for (var i=0;i<LIVE.matches.length;i++){
       var lm=LIVE.matches[i]; if(!lm.home||!lm.away) continue;
       var h=_np(lm.home), w=_np(lm.away);
-      if ((h===a&&w===b)||(h===b&&w===a)){
-        var swap=(_np(parts[0])===w);
+      if ((_eq(h,a)&&_eq(w,b))||(_eq(h,b)&&_eq(w,a))){
+        var swap=_eq(a,w);
         var s0=swap?lm.as:lm.hs, s1=swap?lm.hs:lm.as;
         return { status:lm.status, s0:s0, s1:s1, hasScore:(s0!=null&&s1!=null) };
       }
