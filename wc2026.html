@@ -480,7 +480,7 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <span>·</span>
   <a href="https://index.lewi.fi" target="_blank" rel="noopener" style="color:#64748b;text-decoration:none">Made by Lewi</a>
   <span>·</span>
-  <span style="color:#475569">v1.15.21</span>
+  <span style="color:#475569">v1.15.22</span>
 </div>
 
 <div id="updatesModal" class="cm-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Updates" onclick="if(event.target===this)this.style.display='none'">
@@ -488,6 +488,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
     <button class="cm-x" aria-label="Close" onclick="document.getElementById('updatesModal').style.display='none'">✕</button>
     <h3>Updates</h3>
     <div class="cm-log">
+      <div class="cm-rel">
+        <h4>June 2026 <span class="cm-ver">v1.15.22</span></h4>
+        <ul>
+          <li>Round of 32 fixtures filled in with the qualified teams</li>
+        </ul>
+      </div>
       <div class="cm-rel">
         <h4>June 2026 <span class="cm-ver">v1.15.21</span></h4>
         <ul>
@@ -757,22 +763,22 @@ var MATCHES = [
   {date:'2026-06-27',etH:19,etM:30,teams:'Uzbekistan vs DR Congo',group:'K',venue:'Atlanta',stage:'Group Stage'},
   {date:'2026-06-27',etH:22,etM:0,teams:'Jordan vs Argentina',group:'J',venue:'Dallas',stage:'Group Stage'},
   {date:'2026-06-27',etH:22,etM:0,teams:'Algeria vs Austria',group:'J',venue:'Kansas City',stage:'Group Stage'},
-  {date:'2026-06-28',etH:15,etM:0,teams:'Runner-up A vs Runner-up B',group:'',venue:'Los Angeles',stage:'Round of 32',match:'73'},
-  {date:'2026-06-29',etH:16,etM:30,teams:'Winner E vs 3rd Place',group:'',venue:'Boston',stage:'Round of 32',match:'74'},
-  {date:'2026-06-29',etH:21,etM:0,teams:'Winner F vs Runner-up C',group:'',venue:'Monterrey',stage:'Round of 32',match:'75'},
-  {date:'2026-06-29',etH:13,etM:0,teams:'Winner C vs Runner-up F',group:'',venue:'Houston',stage:'Round of 32',match:'76'},
-  {date:'2026-06-30',etH:17,etM:0,teams:'Winner I vs 3rd Place',group:'',venue:'New York/NJ',stage:'Round of 32',match:'77'},
-  {date:'2026-06-30',etH:13,etM:0,teams:'Runner-up E vs Runner-up I',group:'',venue:'Dallas',stage:'Round of 32',match:'78'},
-  {date:'2026-06-30',etH:21,etM:0,teams:'Winner A vs 3rd Place',group:'',venue:'Mexico City',stage:'Round of 32',match:'79'},
-  {date:'2026-07-01',etH:12,etM:0,teams:'Winner L vs 3rd Place',group:'',venue:'Atlanta',stage:'Round of 32',match:'80'},
-  {date:'2026-07-01',etH:20,etM:0,teams:'Winner D vs 3rd Place',group:'',venue:'San Francisco',stage:'Round of 32',match:'81'},
-  {date:'2026-07-01',etH:16,etM:0,teams:'Winner G vs 3rd Place',group:'',venue:'Seattle',stage:'Round of 32',match:'82'},
-  {date:'2026-07-02',etH:19,etM:0,teams:'Runner-up K vs Runner-up L',group:'',venue:'Toronto',stage:'Round of 32',match:'83'},
-  {date:'2026-07-02',etH:15,etM:0,teams:'Winner H vs Runner-up J',group:'',venue:'Los Angeles',stage:'Round of 32',match:'84'},
-  {date:'2026-07-02',etH:23,etM:0,teams:'Winner B vs 3rd Place',group:'',venue:'Vancouver',stage:'Round of 32',match:'85'},
-  {date:'2026-07-03',etH:18,etM:0,teams:'Winner J vs Runner-up H',group:'',venue:'Miami',stage:'Round of 32',match:'86'},
-  {date:'2026-07-03',etH:21,etM:30,teams:'Winner K vs 3rd Place',group:'',venue:'Kansas City',stage:'Round of 32',match:'87'},
-  {date:'2026-07-03',etH:14,etM:0,teams:'Runner-up D vs Runner-up G',group:'',venue:'Dallas',stage:'Round of 32',match:'88'},
+  {date:'2026-06-28',etH:15,etM:0,teams:'South Africa vs Canada',group:'',venue:'Los Angeles',stage:'Round of 32',match:'73'},
+  {date:'2026-06-29',etH:16,etM:30,teams:'Germany vs Paraguay',group:'',venue:'Boston',stage:'Round of 32',match:'74'},
+  {date:'2026-06-29',etH:21,etM:0,teams:'Netherlands vs Morocco',group:'',venue:'Monterrey',stage:'Round of 32',match:'75'},
+  {date:'2026-06-29',etH:13,etM:0,teams:'Brazil vs Japan',group:'',venue:'Houston',stage:'Round of 32',match:'76'},
+  {date:'2026-06-30',etH:17,etM:0,teams:'France vs Sweden',group:'',venue:'New York/NJ',stage:'Round of 32',match:'77'},
+  {date:'2026-06-30',etH:13,etM:0,teams:'Ivory Coast vs Norway',group:'',venue:'Dallas',stage:'Round of 32',match:'78'},
+  {date:'2026-06-30',etH:21,etM:0,teams:'Mexico vs Ecuador',group:'',venue:'Mexico City',stage:'Round of 32',match:'79'},
+  {date:'2026-07-01',etH:12,etM:0,teams:'England vs DR Congo',group:'',venue:'Atlanta',stage:'Round of 32',match:'80'},
+  {date:'2026-07-01',etH:20,etM:0,teams:'USA vs Bosnia & Herz.',group:'',venue:'San Francisco',stage:'Round of 32',match:'81'},
+  {date:'2026-07-01',etH:16,etM:0,teams:'Belgium vs Senegal',group:'',venue:'Seattle',stage:'Round of 32',match:'82'},
+  {date:'2026-07-02',etH:19,etM:0,teams:'Portugal vs Croatia',group:'',venue:'Toronto',stage:'Round of 32',match:'83'},
+  {date:'2026-07-02',etH:15,etM:0,teams:'Spain vs Austria',group:'',venue:'Los Angeles',stage:'Round of 32',match:'84'},
+  {date:'2026-07-02',etH:23,etM:0,teams:'Switzerland vs Algeria',group:'',venue:'Vancouver',stage:'Round of 32',match:'85'},
+  {date:'2026-07-03',etH:18,etM:0,teams:'Argentina vs Cape Verde',group:'',venue:'Miami',stage:'Round of 32',match:'86'},
+  {date:'2026-07-03',etH:21,etM:30,teams:'Colombia vs Ghana',group:'',venue:'Kansas City',stage:'Round of 32',match:'87'},
+  {date:'2026-07-03',etH:14,etM:0,teams:'Australia vs Egypt',group:'',venue:'Dallas',stage:'Round of 32',match:'88'},
   {date:'2026-07-04',etH:17,etM:0,teams:'Round of 16 – Match 89',group:'',venue:'Philadelphia',stage:'Round of 16',match:'89'},
   {date:'2026-07-04',etH:13,etM:0,teams:'Round of 16 – Match 90',group:'',venue:'Houston',stage:'Round of 16',match:'90'},
   {date:'2026-07-05',etH:16,etM:0,teams:'Round of 16 – Match 91',group:'',venue:'New York/NJ',stage:'Round of 16',match:'91'},
