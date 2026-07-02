@@ -373,12 +373,12 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
 </div>
 
 <div class="tabs">
-  <button id="tabMatches" class="active">Matches</button>
+  <button id="tabMatches">Matches</button>
   <button id="tabGroups">Group Tables</button>
-  <button id="tabBracket">Knockout</button>
+  <button id="tabBracket" class="active">Knockout</button>
 </div>
 
-<div id="matchView">
+<div id="matchView" style="display:none">
   <div id="cdHero" class="cd-hero" style="display:none">
     <div class="cd-label" id="cdLabel"></div>
     <div class="cd-timer" id="cdTimer"></div>
@@ -462,7 +462,8 @@ body { background: #0d1520; font-family: system-ui, -apple-system, sans-serif; c
   <div class="groups" id="groups"></div>
 </div>
 
-<div id="bracketView" style="display:none">
+<div id="bracketView">
+  <div id="cdHeroBracket" class="cd-hero" style="display:none"></div>
   <div id="bracketDesk"></div>
   <div id="bracketMob"></div>
 </div>
@@ -1387,7 +1388,8 @@ function cdSegs(ms){
   return [{n:d,l:'days'},{n:h,l:'hrs'},{n:m,l:'min'},{n:s,l:'sec'}];
 }
 function renderCountdown(){
-  var hero = document.getElementById('cdHero'); if (!hero) return;
+  var heroes = [document.getElementById('cdHero'), document.getElementById('cdHeroBracket')].filter(Boolean);
+  if (!heroes.length) return;
   var info = cdNextInfo();
   var tz = (typeof state !== 'undefined' && typeof state.tz === 'number') ? state.tz : 0;
   var ab = (typeof USER_TZ_ABBR !== 'undefined' && USER_TZ_ABBR[String(tz)]) ? (' ' + USER_TZ_ABBR[String(tz)]) : '';
@@ -1409,10 +1411,12 @@ function renderCountdown(){
       '<div class="cd-cards">' + ms.map(function(m){ return '<div class="cd-card"><div class="cd-match">' + esc(m.teams) + '</div><div class="cd-meta">' + esc(m.venue) + '</div></div>'; }).join('') + '</div>' +
       '<div class="cd-when">' + esc(when) + '</div>';
   } else { show = false; }
-  if (!show){ hero.style.display = 'none'; hero._cdHTML = ''; return; }
-  hero.style.display = 'block';
-  hero.classList.toggle('live', live);
-  if (hero._cdHTML !== html){ hero.innerHTML = html; hero._cdHTML = html; }
+  heroes.forEach(function(hero){
+    if (!show){ hero.style.display = 'none'; hero._cdHTML = ''; return; }
+    hero.style.display = 'block';
+    hero.classList.toggle('live', live);
+    if (hero._cdHTML !== html){ hero.innerHTML = html; hero._cdHTML = html; }
+  });
 }
 var cdTimer = null;
 function refreshStatuses(){
@@ -1480,6 +1484,7 @@ function init(){
   renderFilters(); renderFavBar(); renderGroups(); renderList();
   startCountdown();
   fetchLive();
+  showTab('bracket');
 }
 
 /* fetch live scores/standings from the Netlify function; re-render on success */
