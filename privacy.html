@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy Policy — EPHIX PULSE</title>
+<link rel="icon" type="image/png" href="E.png">
+<meta name="description" content="Privacy policy for Ephix Pulse — what the website and Android app collect, why, and who it is shared with.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://ephix.net/privacy">
+<meta name="theme-color" content="#2196F3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080a0f;--surface:#0e1118;--surface2:#131620;--border:#1c2030;--accent:#7eb8d4;--text:#e8eaf0;--muted:#5a6080;--hero:#2196F3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"DM Sans",system-ui,sans-serif;font-weight:300;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:48px 20px 96px}
+header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
+.brand{font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:2px;color:var(--hero);text-decoration:none;display:inline-block}
+h1{font-family:"Bebas Neue",sans-serif;font-size:44px;letter-spacing:1.5px;margin:18px 0 6px;font-weight:400}
+.updated{color:var(--muted);font-size:13px;margin:0}
+h2{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:1.2px;margin:44px 0 12px;font-weight:400;color:var(--text)}
+h3{font-size:15px;font-weight:500;margin:24px 0 6px;color:var(--accent)}
+p,li{color:#c3c7d4;font-size:15px}
+a{color:var(--accent)}
+ul{padding-left:20px}
+li{margin-bottom:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:20px 0}
+.card p:first-child{margin-top:0}
+.card p:last-child{margin-bottom:0}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <a class="brand" href="/">EPHIX PULSE</a>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: 1 August 2026</p>
+</header>
+
+<p>Ephix Pulse is a trending-tracker for films and TV, available as a website at
+<a href="https://ephix.net">ephix.net</a> and as an Android app. This policy explains what is
+collected, why, and who it reaches. It covers both.</p>
+
+<div class="card">
+  <p><strong>The short version.</strong> There are no accounts and no logins. Nothing you save is
+  sent to a server. The app shows no ads, contains no advertising SDK, and does not use your
+  device's advertising ID. The website uses Google Analytics; the app does not.</p>
+</div>
+
+<h2>What is collected</h2>
+
+<h3>Website (ephix.net)</h3>
+<p>The website uses Google Analytics 4 (property <code>G-5XX60C0HK1</code>) to understand how
+the site is used. This records standard analytics data — pages viewed, approximate location
+derived from IP address, device and browser type, and referring site — and sets Google Analytics
+cookies in your browser.</p>
+<p>It also records interaction events for individual titles, including the TMDB identifier,
+media type, list rank and Pulse Score of the title you interacted with. This is used to see
+which titles and features people find useful. It is not linked to a name, email address or
+account, because the site has none.</p>
+
+<h3>Android app</h3>
+<p>The app contains <strong>no analytics SDK</strong> and collects no usage data.</p>
+<p>If — and only if — you turn on notifications, the app requests a push token and sends it to
+<code>ephix.net/api/push-register</code> along with the platform name ("android"). A push token
+is a delivery address for your app install. It is not an advertising identifier, and it is not
+tied to your identity. It is used solely to deliver the "New in Top 25" notification.</p>
+<p>Your saved list, filters and cached data are stored <strong>on your device only</strong> and
+are never transmitted.</p>
+
+<h2>Who your data reaches</h2>
+
+<table>
+  <tr><th>Service</th><th>Role</th><th>What it receives</th></tr>
+  <tr><td>Google Analytics</td><td>Website analytics</td><td>Website usage, IP address, cookies. Website only.</td></tr>
+  <tr><td>Google / Firebase Cloud Messaging</td><td>Push delivery</td><td>Push token, notification content. Only if you enable notifications.</td></tr>
+  <tr><td>Expo</td><td>Push relay, app updates</td><td>Push token; update checks from the app.</td></tr>
+  <tr><td>Cloudflare</td><td>Hosting, CDN, API</td><td>Requests to ephix.net, including IP address.</td></tr>
+  <tr><td>Supabase</td><td>Database</td><td>Push tokens and trend history.</td></tr>
+  <tr><td>TMDB</td><td>Film/TV data and posters</td><td>Poster images load directly from TMDB's servers, so TMDB receives your IP address.</td></tr>
+  <tr><td>YouTube (Google)</td><td>Trailer playback</td><td>When you play a trailer, YouTube receives your request directly and may set cookies.</td></tr>
+</table>
+
+<p>Trakt, the YouTube Data API and Wikimedia pageview data are requested by our servers, not by
+your device. Those providers see our server, not you.</p>
+
+<h2>What is never done</h2>
+<ul>
+  <li>No advertising ID is read or used, on any platform.</li>
+  <li>No advertising SDK is included, and no ads are shown.</li>
+  <li>No data is sold, rented or shared with data brokers.</li>
+  <li>No cross-app or cross-device tracking, and no advertising profiles.</li>
+  <li>No accounts, so no names, emails, passwords or contact lists.</li>
+</ul>
+
+<h2>How long it is kept</h2>
+<ul>
+  <li><strong>Push tokens</strong> — kept while notifications are enabled. Turning notifications
+  off in the app, or uninstalling it, stops delivery; tokens that stop working are discarded.</li>
+  <li><strong>Analytics</strong> — retained according to the Google Analytics retention setting
+  for the property.</li>
+  <li><strong>On-device data</strong> — stays until you clear the app's storage or uninstall.</li>
+</ul>
+
+<h2>Your choices</h2>
+<ul>
+  <li><strong>Notifications</strong> — entirely optional, off until you enable them, and
+  revocable at any time in the app or in Android settings.</li>
+  <li><strong>Analytics</strong> — browser "do not track" and content blockers will stop the
+  Google Analytics script from loading.</li>
+  <li><strong>Access or deletion</strong> — because there are no accounts, there is generally no
+  personal record to retrieve. If you believe data relating to you is held, contact us below and
+  it will be removed.</li>
+</ul>
+
+<h2>Children</h2>
+<p>Ephix Pulse is not directed at children under 13 and does not knowingly collect data from
+them.</p>
+
+<h2>Changes</h2>
+<p>If what is collected changes, this page and the app's Play Store data-safety declaration will
+be updated together, and the date at the top will change.</p>
+
+<h2>Contact</h2>
+<p>Questions or removal requests: <a href="mailto:lewi.hirvela@gmail.com">lewi.hirvela@gmail.com</a></p>
+
+<footer>
+  <p>This product uses the TMDB API but is not endorsed or certified by TMDB.
+  Data from TMDB, Trakt, YouTube and Wikipedia. &middot; <a href="/">Back to Ephix Pulse</a></p>
+</footer>
+
+</div>
+</body>
+</html>
