@@ -1,3 +1,18 @@
 .wrangler/
 node_modules/
 dist/
+
+# internal notes — not for a public repo
+MOBILE-HANDOVER.md
+
+# secrets
+.dev.vars
+.env
+.env.*
+*.key
+
+# build artifacts
+*.aab
+*.apk
+*.keystore
+*.jks
