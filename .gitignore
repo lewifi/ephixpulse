@@ -17,5 +17,5 @@ MOBILE-HANDOVER.md
 *.keystore
 *.jks
 
-# screenshots
-Screenshot_*
+# assets (screenshots, etc.)
+assets/
