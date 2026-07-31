@@ -16,3 +16,6 @@ MOBILE-HANDOVER.md
 *.apk
 *.keystore
 *.jks
+
+# screenshots
+Screenshot_*
