@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API Analytics — EPHIX PULSE</title>
+<link rel="icon" type="image/png" href="E.png">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#2196F3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080a0f;--surface:#0e1118;--surface2:#131620;--border:#1c2030;--accent:#7eb8d4;--text:#e8eaf0;--muted:#5a6080;--hero:#2196F3;--error:#ef5350}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"DM Sans",system-ui,sans-serif;font-weight:300;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:48px 20px 96px}
+header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
+.brand{font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:2px;color:var(--hero);text-decoration:none;display:inline-block}
+h1{font-family:"Bebas Neue",sans-serif;font-size:44px;letter-spacing:1.5px;margin:18px 0 6px;font-weight:400}
+.updated{color:var(--muted);font-size:13px;margin:0}
+h2{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:1.2px;margin:44px 0 12px;font-weight:400;color:var(--text)}
+p,li{color:#c3c7d4;font-size:15px}
+a{color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:20px 0}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;text-align:center}
+.stat-value{font-size:36px;font-family:"Bebas Neue",sans-serif;color:var(--text);line-height:1}
+.stat-label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:8px;font-weight:500}
+.stat-value.error{color:var(--error)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:500;text-transform:uppercase;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.badge.tmdb{color:#01b4e4;border-color:#01b4e433;background:#01b4e411}
+.badge.trakt{color:#ed1c24;border-color:#ed1c2433;background:#ed1c2411}
+.badge.youtube{color:#ff0000;border-color:#ff000033;background:#ff000011}
+.badge.wikipedia{color:#ffffff;border-color:#ffffff33;background:#ffffff11}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+footer a{color:var(--muted)}
+#loading{text-align:center;padding:40px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <a class="brand" href="/">EPHIX PULSE</a>
+  <h1>API Analytics</h1>
+  <p class="updated" id="lastUpdated">Loading...</p>
+</header>
+
+<div id="loading">Fetching rate limit data...</div>
+
+<div id="content" style="display:none">
+  <div class="card">
+    <p>Showing <strong>429 Rate Limit</strong> events detected by the Cloudflare API proxies over the last 30 days. These indicate when upstream APIs (TMDB, Trakt, YouTube, Wikipedia) throttled our requests.</p>
+  </div>
+
+  <h2>Total Throttles (30 Days)</h2>
+  <div class="stat-grid" id="totals">
+    <!-- populated by JS -->
+  </div>
+
+  <h2>Recent Events</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Date</th>
+        <th>Count</th>
+        <th>Latest Event</th>
+        <th>Retry-After</th>
+      </tr>
+    </thead>
+    <tbody id="eventsBody">
+      <!-- populated by JS -->
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  <p><a href="/">Back to Ephix Pulse</a></p>
+</footer>
+
+</div>
+
+<script>
+async function load() {
+  try {
+    const res = await fetch('/api/ratelimit-stats');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('lastUpdated').textContent = `Generated: ${new Date(data.generated).toLocaleString()}`;
+    
+    const totalsEl = document.getElementById('totals');
+    const tbody = document.getElementById('eventsBody');
+    
+    let htmlTotals = '';
+    let events = [];
+
+    // Process services
+    for (const [service, stats] of Object.entries(data.services || {})) {
+      const count = stats.totalHits;
+      htmlTotals += `
+        <div class="stat-card">
+          <div class="stat-value ${count > 0 ? 'error' : ''}">${count}</div>
+          <div class="stat-label">${service}</div>
+        </div>
+      `;
+
+      // Extract events
+      for (const [date, dayData] of Object.entries(stats.days || {})) {
+        if (dayData && dayData.count > 0) {
+          const latestHit = dayData.hits && dayData.hits.length > 0 
+            ? dayData.hits[dayData.hits.length - 1] 
+            : null;
+            
+          events.push({
+            service,
+            date,
+            count: dayData.count,
+            time: latestHit ? new Date(latestHit.time).toLocaleString() : 'Unknown',
+            retryAfter: latestHit ? latestHit.retryAfter : 'Unknown'
+          });
+        }
+      }
+    }
+    
+    totalsEl.innerHTML = htmlTotals;
+    
+    events.sort((a, b) => b.date.localeCompare(a.date)); // Sort by date desc
+    
+    if (events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No rate limits hit in the last 30 days. 🎉</td></tr>';
+    } else {
+      let htmlEvents = '';
+      for (const ev of events) {
+        htmlEvents += `
+          <tr>
+            <td><span class="badge ${ev.service}">${ev.service}</span></td>
+            <td>${ev.date}</td>
+            <td style="font-weight:bold;color:var(--error)">${ev.count}</td>
+            <td style="color:var(--muted)">${ev.time}</td>
+            <td style="color:var(--muted)">${ev.retryAfter}</td>
+          </tr>
+        `;
+      }
+      tbody.innerHTML = htmlEvents;
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('loading').innerHTML = `<span style="color:var(--error)">Error loading stats: ${err.message}</span>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>
