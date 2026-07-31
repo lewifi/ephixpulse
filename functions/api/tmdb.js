@@ -2,6 +2,8 @@
 // Proxies TMDB v3. Path comes via ?path=trending/all/day; remaining params forwarded.
 // Best-effort warm-isolate cache + edge cache via s-maxage.
 
+import { logRateLimit, rateLimitHeaders } from './_ratelimit.js';
+
 const cache = new Map();
 const TTL = 30 * 60 * 1000; // 30 min — trending barely changes
 
@@ -39,10 +41,12 @@ export async function onRequest(context) {
     const res = await fetch(`https://api.themoviedb.org/3/${path}?${qs}`);
     const data = await res.text();
     if (res.ok) cache.set(cacheKey, { t: Date.now(), body: data });
+    await logRateLimit(env, 'tmdb', res, context);
     return new Response(data, {
       status: res.status,
       headers: {
         ...BASE_HEADERS,
+        ...rateLimitHeaders(res, 'tmdb'),
         'Cache-Control': 'public, max-age=1800, s-maxage=1800',
         'X-Cache': 'MISS',
       },

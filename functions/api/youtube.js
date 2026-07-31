@@ -1,6 +1,8 @@
 // functions/api/youtube.js — Cloudflare Pages Function (route: /api/youtube)
 // Proxies YouTube Data API v3. Long TTL to protect daily quota.
 
+import { logRateLimit, rateLimitHeaders } from './_ratelimit.js';
+
 const cache = new Map();
 const TTL = 6 * 60 * 60 * 1000; // 6 hours — saves quota heavily
 
@@ -38,10 +40,12 @@ export async function onRequest(context) {
     const res = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${qs}`);
     const data = await res.text();
     if (res.ok) cache.set(cacheKey, { t: Date.now(), body: data });
+    await logRateLimit(env, 'youtube', res, context);
     return new Response(data, {
       status: res.status,
       headers: {
         ...BASE_HEADERS,
+        ...rateLimitHeaders(res, 'youtube'),
         'Cache-Control': 'public, max-age=21600, s-maxage=21600',
         'X-Cache': 'MISS',
       },

@@ -2,6 +2,8 @@
 // Proxies Wikimedia pageviews. Caches 404s too, so titles with no article
 // aren't re-queried. CORS header set explicitly for browser calls.
 
+import { logRateLimit, rateLimitHeaders } from './_ratelimit.js';
+
 const cache = new Map();
 const TTL = 12 * 60 * 60 * 1000; // 12 hours
 
@@ -11,7 +13,7 @@ const BASE_HEADERS = {
 };
 
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
   const article = url.searchParams.get('article');
   const range = url.searchParams.get('range');
@@ -42,10 +44,12 @@ export async function onRequest(context) {
     const data = await res.text();
     // Cache both hits AND 404s
     cache.set(cacheKey, { t: Date.now(), status: res.status, body: data });
+    await logRateLimit(env, 'wikipedia', res, context);
     return new Response(data, {
       status: res.status,
       headers: {
         ...BASE_HEADERS,
+        ...rateLimitHeaders(res, 'wikipedia'),
         'Cache-Control': 'public, max-age=43200, s-maxage=43200',
         'X-Cache': 'MISS',
       },

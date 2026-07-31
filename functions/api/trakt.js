@@ -2,6 +2,8 @@
 // Proxies Trakt. Trakt's CDN blocks default User-Agents, so a custom UA is set
 // (same fix as the Netlify version). Verify this still passes through CF's fetch.
 
+import { logRateLimit, rateLimitHeaders } from './_ratelimit.js';
+
 const cache = new Map();
 const TTL = 30 * 60 * 1000;
 
@@ -39,10 +41,12 @@ export async function onRequest(context) {
     });
     const data = await res.text();
     if (res.ok) cache.set(cacheKey, { t: Date.now(), body: data });
+    await logRateLimit(env, 'trakt', res, context);
     return new Response(data, {
       status: res.status,
       headers: {
         ...BASE_HEADERS,
+        ...rateLimitHeaders(res, 'trakt'),
         'Cache-Control': 'public, max-age=1800, s-maxage=1800',
         'X-Cache': 'MISS',
       },
