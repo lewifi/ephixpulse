@@ -49,12 +49,7 @@ export async function onRequestPost({ request, env }) {
     // If duplicate primary key error (code collision 409/23505), loop and try another code
     if (res.status !== 409) {
       const errText = await res.text().catch(() => '');
-      const missingTable = res.status === 404 || res.status === 400 || errText.includes('sync_lists') || errText.includes('relation');
-      return json({
-        error: missingTable ? 'Table sync_lists not created yet in Supabase. Please run sync/schema.sql in Supabase SQL Editor.' : 'Database error',
-        status: res.status,
-        details: errText
-      }, 500);
+      return json({ error: 'db_error', status: res.status, details: errText }, 502);
     }
   }
 
