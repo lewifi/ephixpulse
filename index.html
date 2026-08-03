@@ -5884,6 +5884,15 @@
         if (!optedIn || !baselineSet) return [];
         return firstTimers;
       }
+      function getUnseenEntries() {
+        let seenIds = [];
+        try {
+          seenIds = JSON.parse(localStorage.getItem("pulse_bell_seen") || "[]");
+        } catch (_) {}
+        return newEntries.filter(
+          (item) => !seenIds.includes(`${item.media_type}_${item.id}`),
+        );
+      }
       function renderBellState() {
         const optedIn = localStorage.getItem(STORE_KEY_OPTIN) === "1";
         const btn = document.getElementById("bell-btn");
@@ -5894,9 +5903,11 @@
         else toggle.classList.remove("on");
         if (optedIn) btn.classList.add("active");
         else btn.classList.remove("active");
-        if (optedIn && newEntries.length > 0) {
+        
+        const unseen = getUnseenEntries();
+        if (optedIn && unseen.length > 0) {
           badge.style.display = "flex";
-          badge.textContent = newEntries.length > 9 ? "9+" : newEntries.length;
+          badge.textContent = unseen.length > 9 ? "9+" : unseen.length;
           btn.classList.add("has-new");
         } else {
           badge.style.display = "none";
@@ -5947,9 +5958,18 @@
         const panel = document.getElementById("bell-panel");
         const willOpen = !panel.classList.contains("open");
         panel.classList.toggle("open");
-        if (willOpen && window.innerWidth <= 600) {
-          const r = document.getElementById("bell-btn").getBoundingClientRect();
-          panel.style.top = r.bottom + 8 + "px";
+        if (willOpen) {
+          if (newEntries.length > 0) {
+            const seenIds = newEntries.map((item) => `${item.media_type}_${item.id}`);
+            try {
+              localStorage.setItem("pulse_bell_seen", JSON.stringify(seenIds));
+            } catch (_) {}
+            renderBellState();
+          }
+          if (window.innerWidth <= 600) {
+            const r = document.getElementById("bell-btn").getBoundingClientRect();
+            panel.style.top = r.bottom + 8 + "px";
+          }
         } else {
           panel.style.top = "";
         }
