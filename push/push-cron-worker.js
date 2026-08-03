@@ -171,8 +171,10 @@ async function run(env, { peek = false } = {}) {
   // 4. all tokens, send in chunks of 100
   const tokens = (await supa('push_tokens?select=token')) || [];
   // Tapping the push deep-links to the title when there's exactly one new entry;
-  // otherwise it just opens the app (the in-app "New in Top 25" rail shows them all).
-  const deepLink = fresh.length === 1 ? `/title/${fresh[0].media_type}/${fresh[0].tmdb_id}` : undefined;
+  // otherwise it opens the app on the homepage and shows the "New in Top 25" modal.
+  const deepLink = fresh.length === 1
+    ? `/title/${fresh[0].media_type}/${fresh[0].tmdb_id}`
+    : '/?new25=1';
   const messages = tokens.map((t) => ({
     to: t.token,
     title: 'New in the Top 25',
