@@ -40,59 +40,26 @@ export async function onRequestPost({ request, env }) {
   const members = Array.isArray(row.members) ? row.members : [];
   const pendingJoins = Array.isArray(row.pending_joins) ? row.pending_joins : [];
 
-  // Bootstrap (no existing members) or device is already a member -> auto-approve
+  // Auto-approve: add to members if not already there
   const isAlreadyMember = deviceToken && members.includes(deviceToken);
-  if (!members.length || isAlreadyMember) {
-    const newMembers = deviceToken && !isAlreadyMember ? [...members, deviceToken] : members;
-    if (newMembers.length !== members.length) {
-      await fetch(`${SUPABASE_URL}/rest/v1/sync_lists?code=eq.${encodeURIComponent(code)}`, {
-        method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: newMembers }),
-      });
-    }
-    return json(
-      {
-        status: 'approved',
-        code: row.code,
-        items: row.items || [],
-        updated_at: row.updated_at,
-      },
-      200
-    );
+  const newMembers = deviceToken && !isAlreadyMember ? [...members, deviceToken] : members;
+  if (newMembers.length !== members.length) {
+    await fetch(`${SUPABASE_URL}/rest/v1/sync_lists?code=eq.${encodeURIComponent(code)}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members: newMembers }),
+    });
   }
 
-  // Existing members present & caller is new device -> create pending join
-  const joinId = crypto.randomUUID();
-  const newPending = [
-    ...pendingJoins.filter((j) => Date.now() - new Date(j.createdAt || 0).getTime() < 300000), // Keep 5-min active joins
-    { joinId, deviceToken, createdAt: new Date().toISOString() },
-  ];
-
-  await fetch(`${SUPABASE_URL}/rest/v1/sync_lists?code=eq.${encodeURIComponent(code)}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pending_joins: newPending }),
-  });
-
-  // Send approval push notification to existing members
-  if (members.length > 0) {
-    fetch(EXPO_PUSH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(
-        members.map((toToken) => ({
-          to: toToken,
-          title: 'Ephix Pulse Sync Request',
-          body: `A new device is asking to link to watchlist ${code}. Tap to approve or deny.`,
-          sound: 'default',
-          data: { type: 'sync_approval_request', code, joinId },
-        }))
-      ),
-    }).catch(() => {});
-  }
-
-  return json({ status: 'pending', joinId }, 200);
+  return json(
+    {
+      status: 'approved',
+      code: row.code,
+      items: row.items || [],
+      updated_at: row.updated_at,
+    },
+    200
+  );
 }
 
 function json(body, status = 200) {
