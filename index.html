@@ -6006,9 +6006,353 @@
           scrollToTop();
         }
       });
+      const STORE_KEY_SYNC_CODE = "pulse_sync_code";
+      const STORE_KEY_SYNC_UPDATED = "pulse_sync_updated_at";
+      function getWebSyncState() {
+        return {
+          code: localStorage.getItem(STORE_KEY_SYNC_CODE) || null,
+          updatedAt: localStorage.getItem(STORE_KEY_SYNC_UPDATED) || null,
+        };
+      }
+      function setWebSyncState(code, updatedAt) {
+        if (code) localStorage.setItem(STORE_KEY_SYNC_CODE, code.toUpperCase());
+        else localStorage.removeItem(STORE_KEY_SYNC_CODE);
+        if (updatedAt) localStorage.setItem(STORE_KEY_SYNC_UPDATED, updatedAt);
+        else localStorage.removeItem(STORE_KEY_SYNC_UPDATED);
+        updateSyncBadge();
+      }
+      async function webSyncPush() {
+        const { code, updatedAt } = getWebSyncState();
+        if (!code) return;
+        const items = [...watchlist].map((k) => {
+          const [type, id] = k.split("_");
+          const cached = syncMetadataCache[k];
+          const titleObj = (
+            typeof allItems !== "undefined" ? allItems : []
+          ).find((i) => i.media_type === type && i.id === Number(id));
+          return {
+            id: Number(id),
+            type: type,
+            title: titleObj
+              ? titleObj.title || titleObj.name || "Untitled"
+              : (cached ? cached.title : "Title"),
+            poster_path: titleObj ? titleObj.poster_path : (cached ? cached.poster_path : null),
+          };
+        });
+        try {
+          const res = await fetch("/api/sync/push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, items, baseUpdatedAt: updatedAt }),
+          });
+          const json = await res.json();
+          if (res.status === 409 && json.conflict) {
+            const serverItems = json.serverItems || [];
+            serverItems.forEach((item) => {
+              syncMetadataCache[`${item.type}_${item.id}`] = {
+                title: item.title,
+                poster_path: item.poster_path,
+              };
+            });
+            const localKeys = [...watchlist];
+            const serverKeys = serverItems.map((i) => `${i.type}_${i.id}`);
+            const merged = new Set(localKeys);
+            serverKeys.forEach((k) => merged.add(k));
+            watchlist = merged;
+            saveWatchlist();
+            if (typeof renderGrid === "function") renderGrid();
+            webSyncPush();
+            return;
+          }
+          if (json.ok && json.updated_at) {
+            setWebSyncState(code, json.updated_at);
+          }
+        } catch (e) {}
+      }
+      async function webSyncPull() {
+        const { code } = getWebSyncState();
+        if (!code) return;
+        try {
+          const res = await fetch("/api/sync/pull", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+          if (res.status === 404) {
+            setWebSyncState(null, null);
+            return;
+          }
+          const json = await res.json();
+          if (json.ok && Array.isArray(json.items)) {
+            json.items.forEach((item) => {
+              syncMetadataCache[`${item.type}_${item.id}`] = {
+                title: item.title,
+                poster_path: item.poster_path,
+              };
+            });
+            watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
+            saveWatchlist();
+            if (typeof renderGrid === "function") renderGrid();
+            setWebSyncState(code, json.updated_at);
+          }
+        } catch (e) {}
+      }
+      function openSyncModal() {
+        const overlay = document.getElementById("sync-modal-overlay");
+        if (overlay) {
+          overlay.style.display = "flex";
+          renderSyncModalBody("view");
+        }
+      }
+      function closeSyncModal() {
+        if (webPollInterval) {
+          clearInterval(webPollInterval);
+          webPollInterval = null;
+        }
+        const overlay = document.getElementById("sync-modal-overlay");
+        if (overlay) overlay.style.display = "none";
+      }
+      function updateSyncBadge() {
+        const badge = document.getElementById("sync-badge-btn");
+        if (!badge) return;
+        const { code } = getWebSyncState();
+        if (code) {
+          badge.textContent = `Synced · ${code}`;
+          badge.classList.add("synced");
+        } else {
+          badge.textContent = "Sync my list to other devices";
+          badge.classList.remove("synced");
+        }
+      }
+      let webPollInterval = null;
+      function startWebSyncPolling(code) {
+        if (webPollInterval) clearInterval(webPollInterval);
+        const { updatedAt } = getWebSyncState();
+        let pollCount = 0;
+        webPollInterval = setInterval(async () => {
+          pollCount++;
+          if (pollCount >= 6) {
+            closeSyncModal();
+            return;
+          }
+          try {
+            const res = await fetch("/api/sync/pull", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code }),
+            });
+            const json = await res.json();
+            if (json.ok && json.updated_at !== updatedAt) {
+              clearInterval(webPollInterval);
+              webPollInterval = null;
+              if (Array.isArray(json.items)) {
+                json.items.forEach((item) => {
+                  syncMetadataCache[`${item.type}_${item.id}`] = {
+                    title: item.title,
+                    poster_path: item.poster_path,
+                  };
+                });
+                watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
+                saveWatchlist();
+                if (typeof renderGrid === "function") renderGrid();
+              }
+              setWebSyncState(code, json.updated_at);
+              renderSyncModalBody("view", "Watchlist linked successfully!");
+              setTimeout(() => closeSyncModal(), 5000);
+            }
+          } catch (e) {}
+        }, 5000);
+      }
+      function renderSyncModalBody(mode, msg) {
+        const body = document.getElementById("sync-modal-body");
+        if (!body) return;
+        const { code } = getWebSyncState();
+        if (code) {
+          body.innerHTML = `
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Your Sync Code</div>
+        <div class="sync-code-display">${code}</div>
+        ${msg ? `<div style="color:#4caf50;font-size:13px;margin-bottom:12px;font-weight:500;">${msg}</div>` : ""}
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Type this 6-character code into your other device to link watchlists.</p>
+        <button class="sync-ghost-btn" onclick="webUnlink()">Unlink this device</button>
+      `;
+          if (msg !== "Watchlist linked successfully!") {
+            startWebSyncPolling(code);
+          }
+        } else {
+          if (webPollInterval) {
+            clearInterval(webPollInterval);
+            webPollInterval = null;
+          }
+          if (mode === "input") {
+            body.innerHTML = `
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Enter 6-Character Code</div>
+          <input id="sync-code-input" class="sync-input" type="text" maxlength="6" placeholder="e.g. 4F9K2Q" style="text-transform:uppercase;">
+          ${msg ? `<div style="color:#ff4444;font-size:12px;margin-bottom:8px;">${msg}</div>` : ""}
+          <button class="sync-btn" onclick="webJoinCode()">Link to Code</button>
+          <button class="sync-ghost-btn" onclick="renderSyncModalBody('view')">Back</button>
+        `;
+          } else {
+            body.innerHTML = `
+          ${msg ? `<div style="color:var(--muted);font-size:13px;margin-bottom:12px;font-weight:500;">${msg}</div>` : ""}
+          <button class="sync-btn" onclick="webCreateCode()">Start Syncing (Generate Code)</button>
+          <button class="sync-ghost-btn" onclick="renderSyncModalBody('input')">Enter Code from another device</button>
+        `;
+          }
+        }
+      }
+      async function webCreateCode() {
+        const items = [...watchlist].map((k) => {
+          const [type, id] = k.split("_");
+          const titleObj = (
+            typeof allItems !== "undefined" ? allItems : []
+          ).find((i) => i.media_type === type && i.id === Number(id));
+          return {
+            id: Number(id),
+            type: type,
+            title: titleObj
+              ? titleObj.title || titleObj.name || "Untitled"
+              : "Title",
+            poster_path: titleObj ? titleObj.poster_path : null,
+          };
+        });
+        try {
+          const res = await fetch("/api/sync/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          });
+          const json = await res.json();
+          if (json.ok && json.code) {
+            setWebSyncState(json.code, json.updated_at);
+            renderSyncModalBody("view", "Sync code generated!");
+          } else {
+            alert(json.error || "Failed to generate code");
+          }
+        } catch (e) {
+          alert("Failed to connect to sync server");
+        }
+      }
+      async function webJoinCode() {
+        const input = document.getElementById("sync-code-input");
+        const code = (input ? input.value : "").trim().toUpperCase();
+        if (!/^[2-9A-Z]{6}$/.test(code)) {
+          renderSyncModalBody(
+            "input",
+            "Please enter a valid 6-character code.",
+          );
+          return;
+        }
+        try {
+          const res = await fetch("/api/sync/join", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+          const json = await res.json();
+          if (json.ok || json.status === "approved") {
+            if (Array.isArray(json.items)) {
+              json.items.forEach((item) => {
+                syncMetadataCache[`${item.type}_${item.id}`] = {
+                  title: item.title,
+                  poster_path: item.poster_path,
+                };
+              });
+              const localKeys = [...watchlist];
+              const remoteKeys = json.items.map((i) => `${i.type}_${i.id}`);
+              const merged = new Set(localKeys);
+              remoteKeys.forEach((k) => merged.add(k));
+              watchlist = merged;
+              saveWatchlist();
+              if (typeof renderGrid === "function") renderGrid();
+            }
+            setWebSyncState(code, json.updated_at);
+            webSyncPush();
+            renderSyncModalBody("view", "Watchlist linked successfully!");
+            setTimeout(() => closeSyncModal(), 5000);
+          } else if (json.status === "pending") {
+            alert(
+              "Approval request sent! Please tap Approve on your linked device.",
+            );
+          } else {
+            renderSyncModalBody("input", json.error || "Code not found.");
+          }
+        } catch (e) {
+          renderSyncModalBody("input", "Connection failed.");
+        }
+      }
+      function webUnlink() {
+        if (webPollInterval) {
+          clearInterval(webPollInterval);
+          webPollInterval = null;
+        }
+        setWebSyncState(null, null);
+        renderSyncModalBody("view", "Device unlinked.");
+      }
+      let webSyncInterval = null;
+      let lastActivityTime = Date.now();
+      const IDLE_TIMEOUT_MS = 3 * 60 * 1000;
+      function startWebWatchlistSync() {
+        if (webSyncInterval) clearInterval(webSyncInterval);
+        webSyncInterval = setInterval(async () => {
+          if (document.hidden || currentFilter !== "watchlist") return;
+          if (Date.now() - lastActivityTime > IDLE_TIMEOUT_MS) {
+            stopWebWatchlistSync();
+            return;
+          }
+          const { code, updatedAt } = getWebSyncState();
+          if (!code) return;
+          try {
+            const res = await fetch("/api/sync/pull", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code }),
+            });
+            const json = await res.json();
+            if (json.ok && json.updated_at !== updatedAt) {
+              if (Array.isArray(json.items)) {
+                json.items.forEach((item) => {
+                  syncMetadataCache[`${item.type}_${item.id}`] = {
+                    title: item.title,
+                    poster_path: item.poster_path,
+                  };
+                });
+                watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
+                saveWatchlist();
+                if (typeof renderGrid === "function") renderGrid();
+              }
+              setWebSyncState(code, json.updated_at);
+            }
+          } catch (e) {}
+        }, 10000);
+      }
+      function stopWebWatchlistSync() {
+        if (webSyncInterval) {
+          clearInterval(webSyncInterval);
+          webSyncInterval = null;
+        }
+      }
+      function resetActivityTimer() {
+        lastActivityTime = Date.now();
+        if (currentFilter === "watchlist" && !webSyncInterval) {
+          startWebWatchlistSync();
+        }
+      }
+      window.addEventListener("mousemove", resetActivityTimer);
+      window.addEventListener("keydown", resetActivityTimer);
+      window.addEventListener("scroll", resetActivityTimer);
+      window.addEventListener("click", resetActivityTimer);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopWebWatchlistSync();
+        } else if (currentFilter === "watchlist") {
+          startWebWatchlistSync();
+        }
+      });
       loadWatchlist();
       loadPrevRanks();
       applySoundState();
+      updateSyncBadge();
+      webSyncPull();
       startLoad();
     </script>
     <button
@@ -6103,392 +6447,6 @@
         color: #fff;
       }
     </style>
-
-    <script>
-      const STORE_KEY_SYNC_CODE = "pulse_sync_code";
-      const STORE_KEY_SYNC_UPDATED = "pulse_sync_updated_at";
-
-      function getWebSyncState() {
-        return {
-          code: localStorage.getItem(STORE_KEY_SYNC_CODE) || null,
-          updatedAt: localStorage.getItem(STORE_KEY_SYNC_UPDATED) || null,
-        };
-      }
-
-      function setWebSyncState(code, updatedAt) {
-        if (code) localStorage.setItem(STORE_KEY_SYNC_CODE, code.toUpperCase());
-        else localStorage.removeItem(STORE_KEY_SYNC_CODE);
-        if (updatedAt) localStorage.setItem(STORE_KEY_SYNC_UPDATED, updatedAt);
-        else localStorage.removeItem(STORE_KEY_SYNC_UPDATED);
-        updateSyncBadge();
-      }
-
-      async function webSyncPush() {
-        const { code, updatedAt } = getWebSyncState();
-        if (!code) return;
-        const items = [...watchlist].map((k) => {
-          const [type, id] = k.split("_");
-          const cached = syncMetadataCache[k];
-          const titleObj = (
-            typeof allItems !== "undefined" ? allItems : []
-          ).find((i) => i.media_type === type && i.id === Number(id));
-          return {
-            id: Number(id),
-            type: type,
-            title: titleObj
-              ? titleObj.title || titleObj.name || "Untitled"
-              : (cached ? cached.title : "Title"),
-            poster_path: titleObj ? titleObj.poster_path : (cached ? cached.poster_path : null),
-          };
-        });
-        console.log("WEB PUSHING items:", items.map(i => i.id));
-        try {
-          const res = await fetch("/api/sync/push", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, items, baseUpdatedAt: updatedAt }),
-          });
-          const json = await res.json();
-          if (res.status === 409 && json.conflict) {
-            const serverItems = json.serverItems || [];
-            serverItems.forEach((item) => {
-              syncMetadataCache[`${item.type}_${item.id}`] = {
-                title: item.title,
-                poster_path: item.poster_path,
-              };
-            });
-            const localKeys = [...watchlist];
-            const serverKeys = serverItems.map((i) => `${i.type}_${i.id}`);
-            const merged = new Set(localKeys);
-            serverKeys.forEach((k) => merged.add(k));
-            watchlist = merged;
-            saveWatchlist();
-            if (typeof renderGrid === "function") renderGrid();
-            webSyncPush();
-            return;
-          }
-          if (json.ok && json.updated_at) {
-            setWebSyncState(code, json.updated_at);
-          }
-        } catch (e) {}
-      }
-
-      async function webSyncPull() {
-        const { code } = getWebSyncState();
-        if (!code) return;
-        try {
-          const res = await fetch("/api/sync/pull", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-          });
-          if (res.status === 404) {
-            setWebSyncState(null, null);
-            return;
-          }
-          const json = await res.json();
-          if (json.ok && Array.isArray(json.items)) {
-            console.log("WEB PULLED items:", json.items.map(i => i.id));
-            json.items.forEach((item) => {
-              syncMetadataCache[`${item.type}_${item.id}`] = {
-                title: item.title,
-                poster_path: item.poster_path,
-              };
-            });
-            watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
-            saveWatchlist();
-            if (typeof renderGrid === "function") renderGrid();
-            setWebSyncState(code, json.updated_at);
-          }
-        } catch (e) {}
-      }
-
-      function openSyncModal() {
-        const overlay = document.getElementById("sync-modal-overlay");
-        if (overlay) overlay.classList.add("open");
-        renderSyncModalBody("view");
-      }
-      function closeSyncModal(e) {
-        if (
-          e &&
-          e.target !== e.currentTarget &&
-          !e.target.classList.contains("modal-close")
-        )
-          return;
-        const overlay = document.getElementById("sync-modal-overlay");
-        if (overlay) overlay.classList.remove("open");
-      }
-
-      function updateSyncBadge() {
-        const badge = document.getElementById("sync-badge-btn");
-        if (!badge) return;
-        const { code } = getWebSyncState();
-        if (code) {
-          badge.textContent = `Synced · ${code}`;
-          badge.classList.add("synced");
-        } else {
-          badge.textContent = "Sync my list to other devices";
-          badge.classList.remove("synced");
-        }
-      }
-
-      let webPollInterval = null;
-
-      function openSyncModal() {
-        const overlay = document.getElementById("sync-modal-overlay");
-        if (overlay) {
-          overlay.style.display = "flex";
-          renderSyncModalBody("view");
-        }
-      }
-      function closeSyncModal() {
-        if (webPollInterval) {
-          clearInterval(webPollInterval);
-          webPollInterval = null;
-        }
-        const overlay = document.getElementById("sync-modal-overlay");
-        if (overlay) overlay.style.display = "none";
-      }
-
-      function startWebSyncPolling(code) {
-        if (webPollInterval) clearInterval(webPollInterval);
-        const { updatedAt } = getWebSyncState();
-        let pollCount = 0;
-        webPollInterval = setInterval(async () => {
-          pollCount++;
-          if (pollCount >= 6) {
-            // 30 seconds (6 * 5s)
-            closeSyncModal();
-            return;
-          }
-          try {
-            const res = await fetch("/api/sync/pull", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ code }),
-            });
-            const json = await res.json();
-            if (json.ok && json.updated_at !== updatedAt) {
-              clearInterval(webPollInterval);
-              webPollInterval = null;
-              if (Array.isArray(json.items)) {
-                json.items.forEach((item) => {
-                  syncMetadataCache[`${item.type}_${item.id}`] = {
-                    title: item.title,
-                    poster_path: item.poster_path,
-                  };
-                });
-                watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
-                saveWatchlist();
-                if (typeof renderGrid === "function") renderGrid();
-              }
-              setWebSyncState(code, json.updated_at);
-              renderSyncModalBody("view", "Watchlist linked successfully!");
-              setTimeout(() => closeSyncModal(), 5000);
-            }
-          } catch (e) {}
-        }, 5000);
-      }
-
-      function renderSyncModalBody(mode, msg) {
-        const body = document.getElementById("sync-modal-body");
-        if (!body) return;
-        const { code } = getWebSyncState();
-
-        if (code) {
-          body.innerHTML = `
-        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Your Sync Code</div>
-        <div class="sync-code-display">${code}</div>
-        ${msg ? `<div style="color:#4caf50;font-size:13px;margin-bottom:12px;font-weight:500;">${msg}</div>` : ""}
-        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Type this 6-character code into your other device to link watchlists.</p>
-        <button class="sync-ghost-btn" onclick="webUnlink()">Unlink this device</button>
-      `;
-          if (msg !== "Watchlist linked successfully!") {
-            startWebSyncPolling(code);
-          }
-        } else {
-          if (webPollInterval) {
-            clearInterval(webPollInterval);
-            webPollInterval = null;
-          }
-          if (mode === "input") {
-            body.innerHTML = `
-          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Enter 6-Character Code</div>
-          <input id="sync-code-input" class="sync-input" type="text" maxlength="6" placeholder="e.g. 4F9K2Q" style="text-transform:uppercase;">
-          ${msg ? `<div style="color:#ff4444;font-size:12px;margin-bottom:8px;">${msg}</div>` : ""}
-          <button class="sync-btn" onclick="webJoinCode()">Link to Code</button>
-          <button class="sync-ghost-btn" onclick="renderSyncModalBody('view')">Back</button>
-        `;
-          } else {
-            body.innerHTML = `
-          ${msg ? `<div style="color:var(--muted);font-size:13px;margin-bottom:12px;font-weight:500;">${msg}</div>` : ""}
-          <button class="sync-btn" onclick="webCreateCode()">Start Syncing (Generate Code)</button>
-          <button class="sync-ghost-btn" onclick="renderSyncModalBody('input')">Enter Code from another device</button>
-        `;
-          }
-        }
-      }
-
-      async function webCreateCode() {
-        const items = [...watchlist].map((k) => {
-          const [type, id] = k.split("_");
-          const titleObj = (
-            typeof allItems !== "undefined" ? allItems : []
-          ).find((i) => i.media_type === type && i.id === Number(id));
-          return {
-            id: Number(id),
-            type: type,
-            title: titleObj
-              ? titleObj.title || titleObj.name || "Untitled"
-              : "Title",
-            poster_path: titleObj ? titleObj.poster_path : null,
-          };
-        });
-        try {
-          const res = await fetch("/api/sync/create", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ items }),
-          });
-          const json = await res.json();
-          if (json.ok && json.code) {
-            setWebSyncState(json.code, json.updated_at);
-            renderSyncModalBody("view", "Sync code generated!");
-          } else {
-            alert(json.error || "Failed to generate code");
-          }
-        } catch (e) {
-          alert("Failed to connect to sync server");
-        }
-      }
-
-      async function webJoinCode() {
-        const input = document.getElementById("sync-code-input");
-        const code = (input ? input.value : "").trim().toUpperCase();
-        if (!/^[2-9A-Z]{6}$/.test(code)) {
-          renderSyncModalBody(
-            "input",
-            "Please enter a valid 6-character code.",
-          );
-          return;
-        }
-        try {
-          const res = await fetch("/api/sync/join", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-          });
-          const json = await res.json();
-          if (json.ok || json.status === "approved") {
-            if (Array.isArray(json.items)) {
-              json.items.forEach((item) => {
-                syncMetadataCache[`${item.type}_${item.id}`] = {
-                  title: item.title,
-                  poster_path: item.poster_path,
-                };
-              });
-              const localKeys = [...watchlist];
-              const remoteKeys = json.items.map((i) => `${i.type}_${i.id}`);
-              const merged = new Set(localKeys);
-              remoteKeys.forEach((k) => merged.add(k));
-              watchlist = merged;
-              saveWatchlist();
-              if (typeof renderGrid === "function") renderGrid();
-            }
-            setWebSyncState(code, json.updated_at);
-            webSyncPush();
-            renderSyncModalBody("view", "Watchlist linked successfully!");
-            setTimeout(() => closeSyncModal(), 5000);
-          } else if (json.status === "pending") {
-            alert(
-              "Approval request sent! Please tap Approve on your linked device.",
-            );
-          } else {
-            renderSyncModalBody("input", json.error || "Code not found.");
-          }
-        } catch (e) {
-          renderSyncModalBody("input", "Connection failed.");
-        }
-      }
-
-      function webUnlink() {
-        if (webPollInterval) {
-          clearInterval(webPollInterval);
-          webPollInterval = null;
-        }
-        setWebSyncState(null, null);
-        renderSyncModalBody("view", "Device unlinked.");
-      }
-
-      let webSyncInterval = null;
-      let lastActivityTime = Date.now();
-      const IDLE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-
-      function startWebWatchlistSync() {
-        if (webSyncInterval) clearInterval(webSyncInterval);
-        webSyncInterval = setInterval(async () => {
-          if (document.hidden || currentFilter !== "watchlist") return;
-          if (Date.now() - lastActivityTime > IDLE_TIMEOUT_MS) {
-            stopWebWatchlistSync();
-            return;
-          }
-          const { code, updatedAt } = getWebSyncState();
-          if (!code) return;
-          try {
-            const res = await fetch("/api/sync/pull", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ code }),
-            });
-            const json = await res.json();
-            if (json.ok && json.updated_at !== updatedAt) {
-              if (Array.isArray(json.items)) {
-                json.items.forEach((item) => {
-                  syncMetadataCache[`${item.type}_${item.id}`] = {
-                    title: item.title,
-                    poster_path: item.poster_path,
-                  };
-                });
-                watchlist = new Set(json.items.map((i) => `${i.type}_${i.id}`));
-                saveWatchlist();
-                if (typeof renderGrid === "function") renderGrid();
-              }
-              setWebSyncState(code, json.updated_at);
-            }
-          } catch (e) {}
-        }, 10000);
-      }
-
-      function stopWebWatchlistSync() {
-        if (webSyncInterval) {
-          clearInterval(webSyncInterval);
-          webSyncInterval = null;
-        }
-      }
-
-      function resetActivityTimer() {
-        lastActivityTime = Date.now();
-        if (currentFilter === "watchlist" && !webSyncInterval) {
-          startWebWatchlistSync();
-        }
-      }
-
-      window.addEventListener("mousemove", resetActivityTimer);
-      window.addEventListener("keydown", resetActivityTimer);
-      window.addEventListener("scroll", resetActivityTimer);
-      window.addEventListener("click", resetActivityTimer);
-
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          stopWebWatchlistSync();
-        } else if (currentFilter === "watchlist") {
-          startWebWatchlistSync();
-        }
-      });
-
-      updateSyncBadge();
-      webSyncPull();
-    </script>
 
     <!-- Cross-Device Sync Modal & Web Sync Script -->
     <div
