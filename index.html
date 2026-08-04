@@ -835,6 +835,7 @@
         animation: fadeUp 0.35s ease forwards;
         content-visibility: auto;
         contain-intrinsic-size: auto 280px;
+        contain: layout paint;
       }
       @keyframes fadeUp {
         to {
@@ -847,10 +848,12 @@
         height: 100%;
         object-fit: cover;
         display: block;
-        transition: transform 0.5s ease;
+        transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        will-change: transform;
+        transform: translateZ(0);
       }
       .card:hover img {
-        transform: scale(1.07);
+        transform: scale(1.07) translateZ(0);
       }
       .card-overlay {
         position: absolute;
@@ -934,9 +937,8 @@
         opacity: 0;
         overflow: hidden;
         transition:
-          max-height 0.3s ease,
-          opacity 0.25s ease,
-          margin 0.3s ease;
+          max-height 0.15s ease-out,
+          opacity 0.15s ease-out;
       }
       .card:hover .card-meta {
         max-height: 30px;
@@ -952,9 +954,8 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         transition:
-          max-height 0.3s ease,
-          opacity 0.25s ease,
-          margin 0.3s ease;
+          max-height 0.15s ease-out,
+          opacity 0.15s ease-out;
       }
       .card:hover .card-genres {
         max-height: 20px;
