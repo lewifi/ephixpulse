@@ -2760,6 +2760,123 @@
       [data-theme="light"] .logo {
         animation: logo-breathe-light 4s ease-in-out infinite;
       }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .menu-trigger {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: var(--muted);
+        transition: color 0.2s;
+      }
+      .menu-trigger:hover {
+        color: var(--text);
+      }
+      .menu-trigger svg {
+        width: 24px;
+        height: 24px;
+      }
+      .overlay {
+        display: contents;
+      }
+      .overlay__bar,
+      .overlay__foot {
+        display: none !important;
+      }
+      .overlay__content {
+        display: contents;
+      }
+      @media (max-width: 900px) {
+        .menu-trigger {
+          display: inline-block;
+        }
+        .overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          z-index: 150;
+          background: var(--bg);
+          grid-template-rows: 64px 1fr auto;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-8px);
+          transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+        }
+        .overlay.is-open {
+          opacity: 1;
+          visibility: visible;
+          transform: none;
+        }
+        .overlay__bar {
+          display: flex !important;
+          align-items: center;
+          justify-content: space-between;
+          height: 64px;
+          padding: 0 clamp(16px, 4vw, 48px);
+          border-bottom: 1px solid var(--border);
+        }
+        .overlay__close {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--muted);
+          background: none;
+          border: none;
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+        .overlay__close:hover {
+          color: var(--accent);
+        }
+        .overlay__close svg {
+          width: 18px;
+          height: 18px;
+        }
+        .overlay__content {
+          display: block !important;
+          overflow-y: auto;
+          padding: 24px 0;
+        }
+        .overlay__foot {
+          display: flex !important;
+          justify-content: space-between;
+          padding: 16px clamp(16px, 4vw, 48px);
+          border-top: 1px solid var(--border);
+          font-size: 11px;
+          color: var(--muted);
+        }
+        .controls {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 24px;
+          border-bottom: none;
+          padding: 0 clamp(16px, 4vw, 48px);
+        }
+        .controls-collapse {
+          display: flex !important;
+          flex-direction: column;
+          gap: 16px;
+          opacity: 1 !important;
+          max-height: none !important;
+          overflow: visible !important;
+          position: static !important;
+          border: none !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+        }
+        #filter-toggle {
+          display: none !important;
+        }
+      }
     </style>
     <script
       async
@@ -2803,12 +2920,53 @@
           >Wiki Queries</span
         >
       </div>
-      <div class="bell-wrap" id="bell-wrap">
+      <div class="header-actions">
+        <div class="bell-wrap" id="bell-wrap">
+          <button
+            class="bell-btn"
+            id="bell-btn"
+            onclick="toggleBellPanel(event)"
+            aria-label="New entry notifications"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            <span class="bell-badge" id="bell-badge" style="display: none"
+              >0</span
+            >
+          </button>
+          <div class="bell-panel" id="bell-panel">
+            <div class="bell-panel-header">
+              <span class="bell-panel-title">New Entries</span>
+              <span class="bell-panel-meta" id="bell-meta">in Top 25</span>
+            </div>
+            <div class="bell-toggle-row">
+              <label for="bell-toggle">Notify me of new entries</label>
+              <div
+                class="bell-switch"
+                id="bell-toggle"
+                onclick="toggleBellOptIn()"
+              ></div>
+            </div>
+            <div id="bell-list"></div>
+          </div>
+        </div>
         <button
-          class="bell-btn"
-          id="bell-btn"
-          onclick="toggleBellPanel(event)"
-          aria-label="New entry notifications"
+          class="install-btn"
+          id="install-btn"
+          onclick="document.getElementById('installModal').style.display = 'flex'"
+          aria-label="Install app"
+          title="Install app"
         >
           <svg
             width="14"
@@ -2820,51 +2978,32 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            <rect x="7" y="2" width="10" height="20" rx="2" />
+            <line x1="11" y1="18.5" x2="13" y2="18.5" />
           </svg>
-          <span class="bell-badge" id="bell-badge" style="display: none"
-            >0</span
-          >
+          <span class="install-label">Install App</span>
         </button>
-        <div class="bell-panel" id="bell-panel">
-          <div class="bell-panel-header">
-            <span class="bell-panel-title">New Entries</span>
-            <span class="bell-panel-meta" id="bell-meta">in Top 25</span>
-          </div>
-          <div class="bell-toggle-row">
-            <label for="bell-toggle">Notify me of new entries</label>
-            <div
-              class="bell-switch"
-              id="bell-toggle"
-              onclick="toggleBellOptIn()"
-            ></div>
-          </div>
-          <div id="bell-list"></div>
-        </div>
-      </div>
-      <button
-        class="install-btn"
-        id="install-btn"
-        onclick="document.getElementById('installModal').style.display = 'flex'"
-        aria-label="Install app"
-        title="Install app"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+        <button
+          class="menu-trigger"
+          id="menuOpen"
+          onclick="openMenu()"
+          aria-label="Open filter menu"
+          aria-expanded="false"
+          aria-controls="overlay"
         >
-          <rect x="7" y="2" width="10" height="20" rx="2" />
-          <line x1="11" y1="18.5" x2="13" y2="18.5" />
-        </svg>
-        <span class="install-label">Install App</span>
-      </button>
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path class="burger-fill" stroke="none" d="M6 11c0-4.4 4.5-7 10-7s10 2.6 10 7z" opacity="0.16" />
+              <path d="M6 11c0-4.4 4.5-7 10-7s10 2.6 10 7z" />
+              <path d="M6 11h20" />
+              <path d="M7 15.5c1.2-1.4 2.6-1.4 3.8 0s2.6 1.4 3.8 0 2.6-1.4 3.8 0 2.6 1.4 3.8 0" stroke="#3a7d6e" />
+              <rect x="6.5" y="18.5" width="19" height="3.4" rx="1.7" stroke="#c89d7c" />
+              <path d="M6 25c0-1.7 1.4-2.5 3-2.5h14c1.6 0 3 .8 3 2.5 0 1.9-2.2 3-5 3H11c-2.8 0-5-1.1-5-3z" />
+              <path d="M12 7.6h.02M16 6.8h.02M20 7.6h.02" stroke-width="2.2" />
+            </g>
+          </svg>
+        </button>
+      </div>
       <div class="live-indicator">
         <div class="live-dot"></div>
         <span class="live-label">Live</span> <span class="live-sep">·</span>
@@ -3064,10 +3203,31 @@
         </div>
       </div>
     </div>
-    <div class="controls" id="controls" style="display: none">
-      <div class="tab-group">
-        <button class="tab active" data-filter="all">All</button>
-        <button class="tab" data-filter="movie">Movies</button>
+    <div
+      class="overlay"
+      id="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu and filters"
+    >
+      <div class="overlay__bar">
+        <div class="logo" onclick="closeMenu(); scrollToTop();" role="button" tabindex="0">
+          EPHIX PULSE
+          <span>What the World is Watching</span>
+        </div>
+        <button class="overlay__close" id="menuClose" onclick="closeMenu()" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+          Close
+        </button>
+      </div>
+      <div class="overlay__content" id="overlay-content">
+        <div class="controls" id="controls" style="display: none">
+          <div class="tab-group">
+            <button class="tab active" data-filter="all">All</button>
+            <button class="tab" data-filter="movie">Movies</button>
         <button class="tab" data-filter="tv">TV</button>
         <button class="tab" data-filter="watchlist">
           My List<span class="tab-count" id="watchlist-count"></span>
@@ -3251,7 +3411,13 @@
           <path class="sound-on-mark" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
         </svg>
       </button>
-      <span id="count-badge"></span>
+          <span id="count-badge"></span>
+        </div>
+      </div>
+      <div class="overlay__foot">
+        <span>EPHIX PULSE &middot; Aggregator v1.15.12</span>
+        <span>Made lovingly by <a href="https://index.lewi.fi" target="_blank" rel="noopener">Lewi</a></span>
+      </div>
     </div>
     <div class="rail-tabs" id="rail-tabs" style="display: none">
       <button
@@ -4864,7 +5030,10 @@
         if (item) openModal(item);
       }
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeModal();
+        if (e.key === "Escape") {
+          closeModal();
+          closeMenu();
+        }
       });
       async function shareTitle(id, type, title) {
         const item = allItems.find((i) => i.id === id && i.media_type === type);
@@ -5457,6 +5626,23 @@
           btn.classList.toggle("active", open);
           btn.setAttribute("aria-expanded", open ? "true" : "false");
         }
+      }
+      function openMenu() {
+        const overlay = document.getElementById("overlay");
+        overlay.style.display = "grid";
+        overlay.offsetHeight;
+        overlay.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+      }
+      function closeMenu() {
+        const overlay = document.getElementById("overlay");
+        overlay.classList.remove("is-open");
+        document.body.style.overflow = "";
+        setTimeout(() => {
+          if (!overlay.classList.contains("is-open")) {
+            overlay.style.display = "none";
+          }
+        }, 300);
       }
       function applySoundState() {
         const btn = document.getElementById("sound-toggle");
