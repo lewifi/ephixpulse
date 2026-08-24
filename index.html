@@ -3892,6 +3892,20 @@
         wikipedia: "/api/wikipedia",
       };
       const IMG_BASE = "https://image.tmdb.org/t/p/w342";
+      /* ── Poster lazy-load observer with 600px buffer ── */
+      let cardImgObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              img.src = img.dataset.src;
+              delete img.dataset.src;
+              cardImgObserver.unobserve(img);
+            }
+          });
+        },
+        { rootMargin: "600px 0px" },
+      );
       const W_TMDB = 0.38;
       const W_TRAKT = 0.42;
       const W_YOUTUBE = 0.12;
@@ -4458,6 +4472,7 @@
         return tile;
       }
       function renderGrid() {
+        cardImgObserver.disconnect();
         const grid = document.getElementById("grid");
         const errEl = document.getElementById("error-state");
         grid.innerHTML = "";
@@ -4598,12 +4613,12 @@
         const yW = item._hasYoutube ? yScore : 0;
         if (poster) {
           const img = document.createElement("img");
-          img.src = poster;
+          img.dataset.src = poster;
           img.alt = title;
-          img.loading = "lazy";
           img.decoding = "async";
           img.onerror = () => img.replaceWith(noPosterEl(title));
           card.appendChild(img);
+          cardImgObserver.observe(img);
         } else {
           card.appendChild(noPosterEl(title));
         }
