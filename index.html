@@ -1396,6 +1396,30 @@
     .card-dl.done { color: #4caf50; border-color: #4caf50; cursor: default; }
     .card-dl.fail { color: #ff5252; border-color: #ff5252; }
     @media (hover: none) { .card-dl { opacity: 1; } }
+    /* Season picker that the ⬇ button opens on TV cards */
+    .card-seasons {
+      position: absolute;
+      inset: auto 6px 6px 6px;
+      z-index: 6;
+      background: rgba(10, 10, 12, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 12px;
+      cursor: default;
+      max-height: 85%;
+      overflow: auto;
+    }
+    .card-seasons .cs-title { font-weight: 600; margin-bottom: 8px; }
+    .card-seasons .cs-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .card-seasons label { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; cursor: pointer; }
+    .card-seasons label:has(input:checked) { background: #2196f3; border-color: #2196f3; }
+    .card-seasons input { margin: 0; width: 12px; height: 12px; }
+    .card-seasons .cs-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .card-seasons .cs-row button { font: inherit; font-size: 12px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: #fff; cursor: pointer; }
+    .card-seasons .cs-go { background: #2196f3; border-color: #2196f3; }
+    .card-seasons .cs-x { margin-left: auto; }
 
     .tab-count {
       margin-left: 4px;
@@ -4686,7 +4710,13 @@
         if (r.ok) { homeDl = true; if (typeof renderGrid === "function" && allItems.length) renderGrid(); }
       } catch (_) { }
     })();
+    // Films add straight away. TV opens a season picker first (latest season
+    // pre-selected) so a tap on The Simpsons never pulls 36 seasons by accident.
     async function homeDownload(item, btn) {
+      if (item.media_type === "tv") return homeSeasonPicker(item, btn);
+      return homeAdd(item, btn, { mode: "all" });
+    }
+    async function homeAdd(item, btn, opts) {
       const title = item.title || item.name || "";
       const year = (item.release_date || item.first_air_date || "").slice(0, 4);
       btn.disabled = true; btn.textContent = "…"; btn.title = "Adding at home…";
@@ -4694,17 +4724,51 @@
         const r = await fetch(`${HOME_DL}/api/add`, {
           method: "POST", credentials: "include",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ type: item.media_type, tmdbId: item.id, mode: "all", title, year }),
+          body: JSON.stringify({ type: item.media_type, tmdbId: item.id, title, year, ...opts }),
         }).then((x) => x.json());
         if (r.error) throw new Error(r.error);
         btn.classList.add("done");
         btn.textContent = r.queued ? "⏳" : "✓";
-        btn.title = r.queued ? "Queued — home is offline, will add when it's back" : r.already ? "Already in the library at home" : "Added at home — downloading";
+        const what = opts.mode === "seasons" ? " (S" + opts.seasons.join(", S") + " + new episodes)" : opts.mode === "future" ? " (new episodes only)" : opts.mode === "all" && item.media_type === "tv" ? " (all seasons)" : "";
+        btn.title = r.queued ? "Queued — home is offline, will add when it's back" : r.already ? "Already in the library at home" : "Added at home — downloading" + what;
       } catch (e) {
         btn.disabled = false; btn.textContent = "✗"; btn.classList.add("fail");
         btn.title = "Couldn't add: " + (e.message || e) + " — click to open download.ephix.net";
         btn.onclick = (ev) => { ev.stopPropagation(); window.open(`${HOME_DL}/?add=${item.media_type}:${item.id}`, "_blank"); };
       }
+    }
+    async function homeSeasonPicker(item, btn) {
+      const card = btn.closest(".card");
+      card.querySelector(".card-seasons")?.remove();
+      btn.disabled = true; btn.textContent = "…";
+      let info;
+      try {
+        info = await fetch(`${HOME_DL}/api/seasons?tmdbId=${item.id}`, { credentials: "include" }).then((x) => x.json());
+        if (info.error) throw new Error(info.error);
+      } catch (e) {
+        btn.disabled = false; btn.textContent = "✗"; btn.classList.add("fail"); btn.title = "Couldn't load seasons: " + (e.message || e);
+        return;
+      }
+      btn.disabled = false; btn.textContent = "⬇";
+      if (info.inLibrary) { btn.classList.add("done"); btn.textContent = "✓"; btn.title = "Already in the library at home"; return; }
+      const last = info.seasons[info.seasons.length - 1];
+      const pop = document.createElement("div");
+      pop.className = "card-seasons";
+      pop.addEventListener("click", (e) => e.stopPropagation());
+      pop.innerHTML =
+        `<div class="cs-title">${escHtml(info.title)} — which seasons?</div>` +
+        `<div class="cs-list">${info.seasons.map((n) => `<label><input type="checkbox" value="${n}"${n === last ? " checked" : ""}>S${String(n).padStart(2, "0")}</label>`).join("")}</div>` +
+        `<div class="cs-row"><button class="cs-go">Add selected</button><button class="cs-new">New episodes only</button><button class="cs-all">All ${info.seasons.length}</button><button class="cs-x" aria-label="Close">×</button></div>`;
+      const close = () => pop.remove();
+      pop.querySelector(".cs-x").onclick = close;
+      pop.querySelector(".cs-go").onclick = () => {
+        const picked = [...pop.querySelectorAll("input:checked")].map((i) => Number(i.value));
+        if (!picked.length) return;
+        close(); homeAdd(item, btn, { mode: "seasons", seasons: picked });
+      };
+      pop.querySelector(".cs-new").onclick = () => { close(); homeAdd(item, btn, { mode: "future" }); };
+      pop.querySelector(".cs-all").onclick = () => { if (confirm(`Add all ${info.seasons.length} seasons of ${info.title}?`)) { close(); homeAdd(item, btn, { mode: "all" }); } };
+      card.appendChild(pop);
     }
     function renderGrid() {
       cardImgObserver.disconnect();
