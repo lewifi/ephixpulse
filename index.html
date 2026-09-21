@@ -1369,6 +1369,33 @@
     .card-star.saved:hover {
       color: #2196f3;
     }
+    /* Owner-only "download at home" button — same treatment as the star, sits below it */
+    .card-dl {
+      position: absolute;
+      top: 80px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 13px;
+      transition: all 0.2s;
+      padding: 0;
+      line-height: 1;
+      opacity: 0;
+    }
+    .card:hover .card-dl, .card-dl.done, .card-dl.fail { opacity: 1; }
+    .card-dl:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+    .card-dl.done { color: #4caf50; border-color: #4caf50; cursor: default; }
+    .card-dl.fail { color: #ff5252; border-color: #ff5252; }
+    @media (hover: none) { .card-dl { opacity: 1; } }
 
     .tab-count {
       margin-left: 4px;
@@ -1596,6 +1623,7 @@
     }
 
     #grid.list-view .card-star,
+    #grid.list-view .card-dl,
     #grid.list-view .card-type-badge {
       position: static;
       opacity: 1;
@@ -4646,25 +4674,37 @@
         });
       return tile;
     }
-    // Owner-only tile linking to the private download page. Never shown to the
-    // public: it renders only on a device where ?owner=1 was visited once
-    // (?owner=0 hides it again). The page itself is behind Cloudflare Access.
-    const OWNER_KEY = "ephix_owner";
-    try {
-      const ownerParam = new URLSearchParams(location.search).get("owner");
-      if (ownerParam === "1") localStorage.setItem(OWNER_KEY, "1");
-      if (ownerParam === "0") localStorage.removeItem(OWNER_KEY);
-    } catch (_) { }
-    function renderOwnerTile() {
-      let owner = false;
-      try { owner = localStorage.getItem(OWNER_KEY) === "1"; } catch (_) { }
-      if (!owner) return null;
-      const tile = document.createElement("a");
-      tile.className = "featured-tile";
-      tile.href = "https://download.ephix.net/";
-      tile.setAttribute("aria-label", "Download — add a show or film at home");
-      tile.innerHTML = `\n    <span class="featured-emoji" aria-hidden="true">⬇️</span>\n    <div class="featured-body">\n      <span class="featured-label">PRIVATE · HOME</span>\n      <span class="featured-title">Download</span>\n      <span class="featured-subtitle">Search a show or film and it downloads at home</span>\n    </div>\n    <span class="featured-arrow" aria-hidden="true">→</span>\n  `;
-      return tile;
+    // Owner-only "download at home" icon on every card. download.ephix.net sits
+    // behind Cloudflare Access; /api/me only answers when this browser holds a
+    // valid Access session (same site, so the cookie travels), so the public
+    // never sees the icon. Clicking sends the TMDB id to Sonarr/Radarr at home.
+    const HOME_DL = "https://download.ephix.net";
+    let homeDl = false;
+    (async () => {
+      try {
+        const r = await fetch(`${HOME_DL}/api/me`, { credentials: "include", cache: "no-store" });
+        if (r.ok) { homeDl = true; if (typeof renderGrid === "function" && allItems.length) renderGrid(); }
+      } catch (_) { }
+    })();
+    async function homeDownload(item, btn) {
+      const title = item.title || item.name || "";
+      const year = (item.release_date || item.first_air_date || "").slice(0, 4);
+      btn.disabled = true; btn.textContent = "…"; btn.title = "Adding at home…";
+      try {
+        const r = await fetch(`${HOME_DL}/api/add`, {
+          method: "POST", credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ type: item.media_type, tmdbId: item.id, mode: "all", title, year }),
+        }).then((x) => x.json());
+        if (r.error) throw new Error(r.error);
+        btn.classList.add("done");
+        btn.textContent = r.queued ? "⏳" : "✓";
+        btn.title = r.queued ? "Queued — home is offline, will add when it's back" : r.already ? "Already in the library at home" : "Added at home — downloading";
+      } catch (e) {
+        btn.disabled = false; btn.textContent = "✗"; btn.classList.add("fail");
+        btn.title = "Couldn't add: " + (e.message || e) + " — click to open download.ephix.net";
+        btn.onclick = (ev) => { ev.stopPropagation(); window.open(`${HOME_DL}/?add=${item.media_type}:${item.id}`, "_blank"); };
+      }
     }
     function renderGrid() {
       cardImgObserver.disconnect();
@@ -4756,8 +4796,6 @@
         !searchQuery &&
         activeSources.size === 0
       ) {
-        const owner = renderOwnerTile();
-        if (owner) fSlot.appendChild(owner);
         const featured = renderFeaturedTile();
         if (featured) fSlot.appendChild(featured);
       }
@@ -4868,6 +4906,18 @@
         toggleWatchlist(item, star);
       });
       card.appendChild(star);
+      if (homeDl) {
+        const dl = document.createElement("button");
+        dl.className = "card-dl";
+        dl.textContent = "⬇";
+        dl.setAttribute("aria-label", "Download at home");
+        dl.title = "Download at home";
+        dl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          homeDownload(item, dl);
+        });
+        card.appendChild(dl);
+      }
       const info = document.createElement("div");
       info.className = "card-info";
       info.innerHTML = `\n    <div class="card-title">${escHtml(title)}</div>\n    <div class="card-meta">\n      <span class="card-imdb">${rating}</span>\n      ${year ? `<span>${year}</span>` : ""}\n    </div>\n    ${genres ? `<div class="card-genres">${genres}</div>` : ""}\n    <div class="pulse-score-wrap">\n      <div class="pulse-score-label">\n        <span>Pulse</span>\n        <strong>${pulse.toFixed(1)}</strong>\n      </div>\n    </div>\n  `;
