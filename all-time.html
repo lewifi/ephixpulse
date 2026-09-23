@@ -79,13 +79,18 @@
     }
   }
   @media (prefers-reduced-motion: reduce) { .logo { animation: none; } }
-  .header-actions { display: flex; align-items: center; gap: 12px; }
-  .nav-link {
-    font-family: "DM Sans", sans-serif; font-size: 11px; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--muted); text-decoration: none;
-    padding: 5px 11px; border: 1px solid var(--border); flex: none; transition: all .2s;
+  /* Companion back to the Live Top 100, in the headline face at half height
+     sharing the title's baseline. Mirrors the All Time link on the main page. */
+  .live-link {
+    font-family: "Bebas Neue", sans-serif;
+    font-size: clamp(16px, 2.5vw, 32px);
+    letter-spacing: 0.04em; line-height: 1;
+    color: var(--muted); text-decoration: none;
+    vertical-align: baseline; margin-left: 16px; white-space: nowrap;
+    transition: color 0.2s ease;
   }
-  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+  .live-link:hover { color: var(--accent); }
+  @media (max-width: 640px) { .live-link { margin-left: 10px; } }
   @media (max-width: 640px) {
     header { height: 56px; gap: 10px; padding: 0 14px; }
     .logo { font-size: 22px; min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -389,13 +394,10 @@
 <body>
 <header>
   <a class="logo" href="/" title="Back to Live Top 100">EPHIX PULSE<span>What the World is Watching<br>Live TV &amp; Movie Trending Aggregator</span></a>
-  <div class="header-actions">
-    <a class="nav-link" href="/">&larr; Live Top 100</a>
-  </div>
 </header>
 
 <div class="section-header">
-  <div class="section-title"><em>All Time</em> Top 100</div>
+  <div class="section-title"><em>All Time</em> Top 100<a class="live-link" href="/">&larr; Live Top 100</a></div>
   <span class="count-badge" id="count-badge"></span>
 </div>
 
