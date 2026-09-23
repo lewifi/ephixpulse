@@ -86,19 +86,33 @@
       overflow-x: hidden;
     }
 
+    /* The background and blur live on ::before rather than on the header itself.
+       backdrop-filter establishes a backdrop root, which clips everything painted
+       inside the element to its own box, and that was cutting the logo's glow off
+       dead at the 64px bottom edge. Moving it to a pseudo-element keeps the blur
+       and lets the glow bloom past the header. overflow was already visible; it
+       was never the culprit. */
     header {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(8, 10, 15, 0.94);
-      backdrop-filter: blur(24px);
-      border-bottom: 1px solid var(--border);
       padding: 0 clamp(16px, 4vw, 48px);
       display: flex;
       align-items: center;
       justify-content: space-between;
       height: 64px;
       gap: 16px;
+    }
+
+    header::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: rgba(8, 10, 15, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
     }
 
     .logo {
@@ -715,6 +729,7 @@
       letter-spacing: 0.04em;
       line-height: 1;
     }
+
 
     .section-title em {
       color: var(--accent);
@@ -1687,8 +1702,9 @@
     }
 
     @media (max-width: 600px) {
-      header {
+      header::before {
         backdrop-filter: none;
+        -webkit-backdrop-filter: none;
       }
 
       #modal-overlay {
