@@ -14,23 +14,20 @@
 <link rel="stylesheet"
   href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap">
 <style>
-  /* Tokens, header, section heading, tabs and tiles are taken from index.html so
-     this reads as the same site rather than something that resembles it. */
   :root, [data-theme="dark"] {
     --bg: #080a0f; --surface: #0e1118; --surface2: #131620; --border: #1c2030;
     --accent: #7eb8d4; --accent2: #ff4757; --accent3: #38d9a9;
     --text: #e8eaf0; --muted: #5a6080; --card-hover: #141824;
+    --tmdb: #01d277; --hero: #2196f3; --modal-bg: #0e1118;
   }
-  * { box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
+    background: var(--bg); color: var(--text);
     font-family: "DM Sans", sans-serif; font-weight: 300;
     min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased;
   }
 
-  /* Background and blur go on ::before, not on the header. backdrop-filter creates
-     a backdrop root that clips everything painted inside the element to its own
-     box, which was cutting the logo's glow off at the 64px edge. */
+  /* ── Header ── */
   header {
     position: sticky; top: 0; z-index: 100;
     padding: 0 clamp(16px, 4vw, 48px);
@@ -47,6 +44,11 @@
     font-family: "Bebas Neue", sans-serif; font-size: 28px; letter-spacing: 0.12em;
     color: var(--text); flex-shrink: 0; text-decoration: none;
     animation: logo-breathe 4s ease-in-out infinite;
+    cursor: pointer; transition: transform 0.2s ease;
+  }
+  .logo:hover {
+    animation: logo-rapid 0.45s steps(2, jump-none) infinite;
+    transform: scale(1.02);
   }
   .logo span {
     display: inline-block; color: var(--muted); font-size: 10px;
@@ -54,10 +56,22 @@
     margin-left: 10px; vertical-align: middle; line-height: 1.3;
     text-shadow: none; animation: none;
   }
+  @keyframes logo-rapid {
+    0%, 100% {
+      color: #2196f3;
+      text-shadow: 0 0 6px rgba(33,150,243,.5), 0 0 16px rgba(33,150,243,.25);
+    }
+    50% {
+      color: #fff;
+      text-shadow: 0 0 14px #fff, 0 0 38px rgba(100,190,255,.95),
+                   0 0 80px rgba(33,150,243,.8), 0 0 140px rgba(33,130,243,.45);
+    }
+  }
   @keyframes logo-breathe {
     0%, 100% {
       color: #2196f3;
-      text-shadow: 0 0 8px rgba(33,150,243,.6), 0 0 22px rgba(33,150,243,.35), 0 0 50px rgba(33,150,243,.18);
+      text-shadow: 0 0 8px rgba(33,150,243,.6), 0 0 22px rgba(33,150,243,.35),
+                   0 0 50px rgba(33,150,243,.18);
     }
     50% {
       color: #f0f8ff;
@@ -67,19 +81,26 @@
     }
   }
   @media (prefers-reduced-motion: reduce) { .logo { animation: none; } }
-  .back {
+  .header-actions { display: flex; align-items: center; gap: 12px; }
+  .nav-link {
     font-family: "DM Sans", sans-serif; font-size: 11px; letter-spacing: .1em;
     text-transform: uppercase; color: var(--muted); text-decoration: none;
     padding: 5px 11px; border: 1px solid var(--border); flex: none; transition: all .2s;
   }
-  .back:hover { color: var(--accent); border-color: var(--accent); }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
   @media (max-width: 640px) {
     header { height: 56px; gap: 10px; padding: 0 14px; }
     .logo { font-size: 22px; min-width: 0; overflow: hidden; white-space: nowrap; }
     .logo span { display: none; }
   }
-  @media (max-width: 600px) { header::before { backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  @media (max-width: 520px) {
+    .logo span { font-size: 9px; margin-left: 8px; }
+  }
+  @media (max-width: 600px) {
+    header::before { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
 
+  /* ── Section header ── */
   .section-header {
     padding: 16px clamp(16px, 4vw, 48px) 14px;
     display: flex; align-items: baseline; justify-content: space-between;
@@ -91,10 +112,11 @@
     letter-spacing: 0.04em; line-height: 1;
   }
   .section-title em { color: var(--accent); font-style: normal; }
-  .section-sub { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .count-badge {
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  }
 
-  /* Same tab-group and tab as the main filters. There are more of them here than
-     the four on the grid, so the strip scrolls sideways rather than wrapping. */
+  /* ── Filters ── */
   .filters { padding: 0 clamp(16px, 4vw, 48px) 16px; display: grid; gap: 8px; }
   .filter-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .filter-row > .label {
@@ -115,22 +137,25 @@
   .tab.active { background: var(--accent); color: #fff; font-weight: 500; }
   .tab:not(.active):hover { color: var(--text); background: var(--border); }
 
+  /* ── Status message ── */
   #msg {
     padding: 0 clamp(16px, 4vw, 48px) 14px;
     font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
   }
 
+  /* ── Grid ── */
   #grid {
     padding: 0 clamp(16px, 4vw, 48px) 60px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 2px;
   }
-  @media (min-width: 900px) { #grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); } }
+  @media (min-width: 900px)  { #grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); } }
   @media (min-width: 1200px) { #grid { grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); } }
 
+  /* ── Cards ── */
   .card {
     position: relative; aspect-ratio: 2/3; overflow: hidden;
     background: var(--surface); opacity: 0; transform: translateY(10px);
-    animation: fadeUp .35s ease forwards;
+    animation: fadeUp .35s ease forwards; cursor: pointer;
     content-visibility: auto; contain-intrinsic-size: auto 280px;
   }
   @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
@@ -139,8 +164,10 @@
     transition: transform .25s cubic-bezier(.25,.46,.45,.94);
   }
   .card:hover img { transform: scale(1.07); }
-  .card .noimg { width: 100%; height: 100%; display: grid; place-items: center; color: var(--muted); font-size: 11px; padding: 12px; text-align: center; }
-
+  .card .noimg {
+    width: 100%; height: 100%; display: grid; place-items: center;
+    color: var(--muted); font-size: 11px; padding: 12px; text-align: center;
+  }
   .card-overlay {
     position: absolute; inset: 0; transition: background .3s;
     background: linear-gradient(to top, rgba(8,10,15,.97) 0, rgba(8,10,15,.45) 38%, transparent 68%);
@@ -154,6 +181,15 @@
     color: rgba(255,255,255,.12); pointer-events: none;
   }
   .card-rank.top3 { color: rgba(126,184,212,.28); }
+  .card-type-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 3px; font-weight: 500;
+    z-index: 3; opacity: 0; transition: opacity 0.25s ease;
+  }
+  .card:hover .card-type-badge { opacity: 1; }
+  .badge-movie { background: rgba(255,71,87,.85); color: #fff; }
+  .badge-tv { background: rgba(126,184,212,.85); color: #0a1520; }
   .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 11px 13px; }
   .card-title { font-size: 12px; font-weight: 500; line-height: 1.3; margin-bottom: 5px; color: #fff; }
   .card-meta {
@@ -162,11 +198,11 @@
     transition: max-height .15s ease-out, opacity .15s ease-out;
   }
   .card:hover .card-meta { max-height: 30px; opacity: 1; }
-  /* No hover on a phone, so the detail would otherwise never be reachable. */
   @media (hover: none) { .card-meta { max-height: 30px; opacity: 1; } }
+  .card-genres { font-size: 10px; color: var(--muted); opacity: .7; }
   .score { color: var(--accent3); font-weight: 500; }
 
-  /* Owner-only download icon, same markup and behaviour as the cards on the main site. */
+  /* ── Download button ── */
   .card-dl {
     position: absolute; top: 8px; right: 8px; z-index: 5;
     width: 26px; height: 26px; border-radius: 50%; padding: 0; line-height: 1;
@@ -179,17 +215,165 @@
   .card-dl.done { color: #4caf50; border-color: #4caf50; cursor: default; }
   .card-dl.fail { color: #ff5252; border-color: #ff5252; }
   @media (hover: none) { .card-dl { opacity: 1; } }
+
+  /* ── Modal ── */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(5,7,12,.88); backdrop-filter: blur(12px);
+    z-index: 500; align-items: center; justify-content: center; padding: 20px;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal {
+    background: #0e1118; border: 1px solid #1c2030; border-radius: 10px;
+    max-width: 720px; width: 100%; max-height: 90vh; overflow-y: auto;
+    position: relative; animation: modal-in 0.25s ease;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.96) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-close {
+    position: absolute; top: 12px; right: 14px;
+    background: rgba(255,255,255,.07); border: 1px solid var(--border);
+    color: var(--muted); width: 30px; height: 30px; border-radius: 50%;
+    font-size: 18px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all .2s; z-index: 10; line-height: 1;
+  }
+  .modal-close:hover { background: rgba(255,255,255,.14); color: var(--text); }
+  .modal-top { display: flex; }
+  .modal-poster { width: 180px; flex-shrink: 0; overflow: hidden; border-radius: 10px 0 0 0; }
+  .modal-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .modal-poster-placeholder {
+    width: 100%; min-height: 270px; background: #131620;
+    display: flex; align-items: center; justify-content: center; color: #2a3050;
+  }
+  .modal-hero {
+    flex: 1; padding: 24px 22px 20px; display: flex; flex-direction: column; gap: 10px;
+    background: linear-gradient(135deg, #0f1320, #0b0e18); border-radius: 0 10px 0 0;
+  }
+  .modal-type-badge {
+    font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px; font-weight: 500; width: fit-content;
+  }
+  .modal-title {
+    font-family: "Bebas Neue", sans-serif; font-size: clamp(22px, 4vw, 34px);
+    letter-spacing: 0.04em; line-height: 1.05; color: #fff;
+  }
+  .modal-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+  .modal-rating { color: #f5c518; font-weight: 500; }
+  .modal-tagline { font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.5; }
+  .modal-body {
+    padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .modal-overview { font-size: 13px; color: #b0b8cc; line-height: 1.7; }
+  .modal-credits { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .modal-credit-block { display: flex; flex-direction: column; gap: 3px; }
+  .modal-credit-label { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .modal-credit-value { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .modal-genres { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modal-genre-tag {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--muted);
+  }
+  .modal-links { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+  .modal-link {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 5px; font-size: 12px; font-family: "DM Sans", sans-serif;
+    font-weight: 500; text-decoration: none; letter-spacing: 0.04em;
+    transition: opacity .2s; cursor: pointer; border: none;
+  }
+  .modal-link:hover { opacity: .8; }
+  .link-tmdb { background: rgba(1,210,119,.15); color: var(--tmdb); border: 1px solid rgba(1,210,119,.3); }
+  .link-imdb { background: rgba(201,165,72,.12); color: #f5c518; border: 1px solid rgba(201,165,72,.3); }
+  .link-google { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid var(--border); }
+  .modal-loading { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+  .modal-spinner {
+    width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 520px) {
+    .modal-poster { width: 110px; }
+    .modal-hero { padding: 14px 12px; }
+    .modal-body { padding: 14px 12px 20px; }
+  }
+
+  /* ── Watch providers ── */
+  .modal-watch {
+    margin: 0 0 16px; padding: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .mb-label {
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .wp-region { color: var(--muted); font-weight: 600; }
+  .wp-logos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wp-logo { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+  .wp-none { font-size: 12px; color: var(--muted); }
+  .wp-link { display: inline-block; margin-top: 10px; font-size: 11px; color: var(--accent); text-decoration: none; }
+  .wp-link:hover { text-decoration: underline; }
+
+  /* ── Trailer ── */
+  .trailer-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin: 12px 0 0; padding: 7px 13px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: background .2s, border-color .2s;
+  }
+  .trailer-btn:hover { background: var(--surface2); border-color: var(--muted); }
+  .trailer-embed {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    border-radius: 10px; overflow: hidden; background: #000; margin: 0 0 16px;
+  }
+  .trailer-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  /* ── Back to top ── */
+  #back-to-top {
+    position: fixed; bottom: 70px; right: 24px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(14,17,24,.9); border: 1px solid rgba(33,150,243,.4);
+    color: #2196f3; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 300;
+    opacity: 0; visibility: hidden; transform: translateY(10px);
+    transition: opacity .3s ease, transform .3s ease, visibility .3s, box-shadow .3s ease;
+    backdrop-filter: blur(8px); padding: 0;
+  }
+  #back-to-top.visible { opacity: 1; visibility: visible; transform: translateY(0); }
+  #back-to-top:hover {
+    background: rgba(33,150,243,.18);
+    box-shadow: 0 0 16px rgba(33,150,243,.6), 0 0 36px rgba(33,150,243,.3), 0 0 60px rgba(33,150,243,.15);
+    animation: btt-burst .5s ease-out;
+  }
+  @keyframes btt-burst {
+    0%   { box-shadow: 0 0 4px rgba(33,150,243,.3); }
+    50%  { box-shadow: 0 0 24px rgba(33,150,243,.9), 0 0 50px rgba(33,150,243,.5), 0 0 80px rgba(33,150,243,.25); }
+    100% { box-shadow: 0 0 16px rgba(33,150,243,.6), 0 0 36px rgba(33,150,243,.3); }
+  }
+  @media (max-width: 600px) {
+    #back-to-top { bottom: 70px; right: 16px; width: 40px; height: 40px; }
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
 <header>
-  <a class="logo" href="/">EPHIX PULSE<span>What the World is Watching<br>Live TV &amp; Movie Trending Aggregator</span></a>
-  <a class="back" href="/">&larr; Live Top 100</a>
+  <a class="logo" href="/" title="Back to Live Top 100">EPHIX PULSE<span>What the World is Watching<br>Live TV &amp; Movie Trending Aggregator</span></a>
+  <div class="header-actions">
+    <a class="nav-link" href="/">&larr; Live Top 100</a>
+  </div>
 </header>
 
 <div class="section-header">
   <div class="section-title"><em>All Time</em> Top 100</div>
-  <div class="section-sub" id="msg-sub"></div>
+  <span class="count-badge" id="count-badge"></span>
 </div>
 
 <div class="filters">
@@ -200,12 +384,35 @@
 <div id="msg">Loading&hellip;</div>
 <div id="grid"></div>
 
+<div id="modal-overlay" onclick="if (event.target === this) closeModal();">
+  <div id="modal">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<button id="back-to-top" onclick="scrollToTop()" aria-label="Back to top" title="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+    stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+</button>
+
 <script>
 const TMDB = '/api/tmdb';
 const IMG = 'https://image.tmdb.org/t/p/w342';
 const HOME_DL = 'https://download.ephix.net';
-const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const GENRE_MAP = {
+  28:'Action', 10759:'Action & Adventure', 12:'Adventure', 16:'Animation',
+  35:'Comedy', 80:'Crime', 99:'Documentary', 18:'Drama', 10751:'Family',
+  14:'Fantasy', 36:'History', 27:'Horror', 9648:'Mystery', 10749:'Romance',
+  878:'Sci-Fi', 53:'Thriller', 10752:'War', 37:'Western',
+};
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 const GENRES = [
   ['', 'All'], ['28','Action'], ['12','Adventure'], ['16','Animation'], ['35','Comedy'],
@@ -222,6 +429,7 @@ let genre = '';
 let decade = '';
 let items = [];
 let homeDl = false;
+const detailCache = {};
 
 const imgObserver = new IntersectionObserver(
   (entries) => {
@@ -236,10 +444,6 @@ const imgObserver = new IntersectionObserver(
   { rootMargin: '600px 0px' },
 );
 
-// TMDB vote counts skew hard towards recent films, so one fixed floor would bury
-// everything made before about 1990. Across all decades the floor has to be high:
-// below roughly 5,000 votes a film released weeks ago outranks The Godfather,
-// because early ratings run hot before the average settles.
 function minVotes(d) {
   if (!d) return 5000;
   const y = +d;
@@ -268,7 +472,7 @@ function query(page, votes) {
     path: 'discover/movie',
     sort_by: 'vote_average.desc',
     'vote_count.gte': String(votes),
-    'with_runtime.gte': '70',        // keeps shorts and featurettes out of the list
+    'with_runtime.gte': '70',
     include_adult: 'false',
     language: 'en-US',
     page: String(page),
@@ -282,21 +486,72 @@ function query(page, votes) {
   return TMDB + '?' + p.toString();
 }
 
-function card(it, i) {
-  const year = (it.release_date || '').slice(0, 4);
-  const art = it.poster_path
-    ? '<img data-src="' + IMG + it.poster_path + '" alt="">'
-    : '<div class="noimg">' + esc(it.title) + '</div>';
-  return '<div class="card" data-id="' + it.id + '">' + art
-    + '<div class="card-overlay"></div>'
-    + '<div class="card-rank' + (i < 3 ? ' top3' : '') + '">' + (i + 1) + '</div>'
-    + '<div class="card-info"><div class="card-title">' + esc(it.title) + '</div>'
-    + '<div class="card-meta">' + (year || '') + '<span class="score">'
-    + Number(it.vote_average).toFixed(1) + '</span>'
-    + Number(it.vote_count).toLocaleString() + ' votes</div></div></div>';
+function buildCard(item, idx) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = item.id;
+  card.style.animationDelay = Math.min(idx * 14, 500) + 'ms';
+
+  const title = item.title || item.name || 'Untitled';
+  const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+  const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
+  const genres = (item.genre_ids || []).slice(0, 2).map((id) => GENRE_MAP[id]).filter(Boolean).join(' · ');
+  const poster = item.poster_path
+    ? IMG + item.poster_path
+    : item.backdrop_path
+      ? 'https://image.tmdb.org/t/p/w780' + item.backdrop_path
+      : null;
+
+  if (poster) {
+    const img = document.createElement('img');
+    img.dataset.src = poster;
+    img.alt = title;
+    img.decoding = 'async';
+    img.onerror = () => img.replaceWith(noPosterEl(title));
+    card.appendChild(img);
+    imgObserver.observe(img);
+  } else {
+    card.appendChild(noPosterEl(title));
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'card-overlay';
+  card.appendChild(overlay);
+
+  const rankEl = document.createElement('div');
+  rankEl.className = 'card-rank' + (idx < 3 ? ' top3' : '');
+  rankEl.textContent = idx + 1;
+  card.appendChild(rankEl);
+
+  const badge = document.createElement('div');
+  badge.className = 'card-type-badge badge-movie';
+  badge.textContent = 'Film';
+  card.appendChild(badge);
+
+  const info = document.createElement('div');
+  info.className = 'card-info';
+  info.innerHTML =
+    '<div class="card-title">' + esc(title) + '</div>' +
+    '<div class="card-meta">' +
+      '<span class="score">' + rating + '</span>' +
+      (year ? '<span>' + year + '</span>' : '') +
+    '</div>' +
+    (genres ? '<div class="card-genres">' + genres + '</div>' : '');
+  card.appendChild(info);
+
+  card.addEventListener('click', () => openModal(item));
+  return card;
 }
 
-// 5 pages of 20 gives the hundred in one batch.
+function noPosterEl(title) {
+  const div = document.createElement('div');
+  div.className = 'noimg';
+  div.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">' +
+    '<rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 8h10M7 12h6"/></svg>' +
+    '<span>' + esc(title) + '</span>';
+  return div;
+}
+
 async function fetchAt(votes) {
   const pages = await Promise.all([1, 2, 3, 4, 5].map((p) => fetch(query(p, votes)).then((r) => r.json())));
   const err = pages.find((p) => p && p.error);
@@ -305,12 +560,12 @@ async function fetchAt(votes) {
 }
 
 async function load() {
-  $('#msg').textContent = 'Loading…';
-  $('#msg-sub').textContent = '';
-  $('#grid').innerHTML = '';
+  document.getElementById('msg').textContent = 'Loading…';
+  document.getElementById('count-badge').textContent = '';
+  const grid = document.getElementById('grid');
+  imgObserver.disconnect();
+  grid.innerHTML = '';
   try {
-    // Narrow combinations genuinely run out: there are no 1950s documentaries with
-    // 150 votes. Step the floor down rather than dead-ending, and say so.
     const start = minVotes(decade);
     const ladder = [start, 300, 150, 50, 20].filter((v, i) => i === 0 || v < start);
     let used = start;
@@ -320,31 +575,32 @@ async function load() {
       if (items.length >= 20) break;
     }
     if (!items.length) {
-      $('#msg').textContent = 'Nothing matched that combination. Try a wider decade, or all genres.';
+      document.getElementById('msg').textContent = 'Nothing matched that combination. Try a wider decade, or all genres.';
       return;
     }
-    const label = (GENRES.find((g) => g[0] === genre) || ['', 'All'])[1];
-    const dlabel = (DECADES.find((d) => d[0] === decade) || ['', 'All'])[1];
-    $('#msg-sub').textContent = label + ' · ' + dlabel;
-    $('#msg').textContent = items.length + ' films · rated by at least ' + used.toLocaleString() + ' voters'
+    document.getElementById('msg').textContent =
+      items.length + ' films · rated by at least ' + used.toLocaleString() + ' voters'
       + (used < start ? ' · relaxed, this combination is thin' : '');
-    imgObserver.disconnect();
-    $('#grid').innerHTML = items.map(card).join('');
-    $('#grid').querySelectorAll('img[data-src]').forEach((img) => imgObserver.observe(img));
+    document.getElementById('count-badge').textContent =
+      items.length + ' title' + (items.length !== 1 ? 's' : '');
+
+    items.forEach((item, i) => {
+      item.media_type = 'movie';
+      grid.appendChild(buildCard(item, i));
+    });
     if (homeDl) addButtons();
   } catch (e) {
-    $('#msg').innerHTML = '<span style="color:var(--accent2)">Could not load: ' + esc(e.message || e) + '</span>';
+    document.getElementById('msg').innerHTML =
+      '<span style="color:var(--accent2)">Could not load: ' + esc(e.message || e) + '</span>';
   }
 }
 
-// download.ephix.net sits behind Cloudflare Access. /api/me only answers when this
-// browser holds a valid Access session, and the cookie travels because both are on
-// the same registrable domain, so the icon never appears for the public.
+/* ── Download at home ── */
 (async () => {
   try {
     const r = await fetch(HOME_DL + '/api/me', { credentials: 'include', cache: 'no-store' });
     if (r.ok) { homeDl = true; if (items.length) addButtons(); }
-  } catch (_) { }
+  } catch (_) {}
 })();
 
 function addButtons() {
@@ -382,8 +638,215 @@ async function grab(it, btn) {
   }
 }
 
-tabs($('#genres'), GENRES, genre, (v) => { genre = v; load(); });
-tabs($('#decades'), DECADES, decade, (v) => { decade = v; load(); });
+/* ── Modal ── */
+async function openModal(item) {
+  const overlay = document.getElementById('modal-overlay');
+  const modalContent = document.getElementById('modal-content');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const slug = String(item.title || '').toLowerCase().normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+    const newUrl = window.location.pathname + '#' + (slug ? slug + '-' : '') + 'movie-' + item.id;
+    window.history.pushState({ modal: true, id: item.id, type: 'movie' }, '', newUrl);
+  } catch (_) {}
+
+  modalContent.innerHTML = '<div class="modal-loading"><div class="modal-spinner"></div>Loading details…</div>';
+  const cacheKey = 'movie_' + item.id;
+  let detail, credits;
+  try {
+    if (detailCache[cacheKey]) {
+      ({ detail, credits } = detailCache[cacheKey]);
+    } else {
+      const [d, c, w] = await Promise.all([
+        fetch(TMDB + '?path=movie/' + item.id + '&append_to_response=videos').then((r) => r.json()),
+        fetch(TMDB + '?path=movie/' + item.id + '/credits').then((r) => r.json()),
+        fetch(TMDB + '?path=movie/' + item.id + '/watch/providers').then((r) => r.json()).catch(() => null),
+      ]);
+      detail = d; credits = c;
+      if (detail) detail._watch = w;
+      detailCache[cacheKey] = { detail, credits };
+    }
+  } catch (err) {
+    modalContent.innerHTML = '<div class="modal-loading">Failed to load details</div>';
+    return;
+  }
+  renderModal(item, detail, credits);
+}
+
+function viewerRegion() {
+  try { const r = new Intl.Locale(navigator.language).region; if (r) return r; } catch (_) {}
+  const p = (navigator.language || '').split('-')[1];
+  return p ? p.toUpperCase() : 'US';
+}
+
+function watchHTML(detail) {
+  const w = detail && detail._watch && detail._watch.results;
+  if (!w) return '';
+  const region = viewerRegion();
+  const data = w[region];
+  if (!data) return '';
+  const flat = data.flatrate || [];
+  const hasRentBuy = (data.rent && data.rent.length) || (data.buy && data.buy.length);
+  if (!flat.length && !hasRentBuy) return '';
+  const WP = 'https://image.tmdb.org/t/p/w92';
+  const logos = flat.slice(0, 8).map((p) =>
+    '<img class="wp-logo" src="' + WP + p.logo_path + '" alt="' + esc(p.provider_name) +
+    '" title="' + esc(p.provider_name) + '">').join('');
+  const body = flat.length
+    ? '<div class="wp-logos">' + logos + '</div>'
+    : '<div class="wp-none">Rent or buy only in your region</div>';
+  return '<div class="modal-watch"><div class="mb-label">Where to watch <span class="wp-region">' +
+    esc(region) + '</span></div>' + body +
+    (data.link ? '<a class="wp-link" href="' + data.link + '" target="_blank" rel="noopener">All options on JustWatch ↗</a>' : '') +
+    '</div>';
+}
+
+function pickTrailer(detail) {
+  const vids = (detail.videos && detail.videos.results) || [];
+  const yt = vids.filter((v) => v.site === 'YouTube' && v.key);
+  if (!yt.length) return null;
+  const score = (v) => (v.type === 'Trailer' ? 2 : v.type === 'Teaser' ? 1 : 0) + (v.official ? 0.5 : 0);
+  yt.sort((a, b) => score(b) - score(a));
+  return yt[0];
+}
+
+function trailerBtn(detail) {
+  const v = pickTrailer(detail);
+  if (!v) return '';
+  return '<button class="trailer-btn" type="button" onclick="toggleTrailer(this)" data-key="' + v.key + '">▶ Watch trailer</button>';
+}
+
+function trailerEmbed(detail) {
+  return pickTrailer(detail) ? '<div class="trailer-embed" id="trailer-embed" style="display:none"></div>' : '';
+}
+
+function toggleTrailer(btn) {
+  const embed = document.getElementById('trailer-embed');
+  if (!embed) return;
+  if (embed.style.display === 'none') {
+    embed.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + btn.dataset.key +
+      '?autoplay=1&rel=0" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+    embed.style.display = '';
+    btn.textContent = '▲ Hide trailer';
+  } else {
+    embed.innerHTML = '';
+    embed.style.display = 'none';
+    btn.textContent = '▶ Watch trailer';
+  }
+}
+
+function stopTrailer() {
+  const e = document.getElementById('trailer-embed');
+  if (e) { e.innerHTML = ''; e.style.display = 'none'; }
+  const b = document.querySelector('.trailer-btn');
+  if (b) b.textContent = '▶ Watch trailer';
+}
+
+function renderModal(item, detail, credits) {
+  const title = detail.title || item.title || 'Untitled';
+  const tagline = detail.tagline || '';
+  const overview = detail.overview || 'No synopsis available.';
+  const rawDate = detail.release_date || '';
+  const year = rawDate.slice(0, 4);
+  const fullDate = rawDate ? (() => {
+    const d = new Date(rawDate);
+    return isNaN(d.getTime()) ? rawDate : d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  })() : null;
+  const rating = detail.vote_average ? detail.vote_average.toFixed(1) : null;
+  const runtime = detail.runtime;
+  const poster = detail.poster_path ? 'https://image.tmdb.org/t/p/w500' + detail.poster_path : null;
+  const imdbId = detail.imdb_id;
+  const genres = (detail.genres || []).map((g) => g.name);
+  const director = (credits.crew || []).filter((c) => c.job === 'Director').map((c) => c.name).slice(0, 3).join(', ');
+  const writers = (credits.crew || []).filter((c) => c.department === 'Writing').map((c) => c.name).slice(0, 3).join(', ');
+  const starring = (credits.cast || []).slice(0, 5).map((c) => c.name).join(', ');
+  const tmdbUrl = 'https://www.themoviedb.org/movie/' + item.id;
+  const imdbUrl = imdbId ? 'https://www.imdb.com/title/' + imdbId : null;
+  const googleUrl = 'https://www.google.com/search?q=' + encodeURIComponent(title + ' ' + (year || '') + ' movie');
+
+  document.getElementById('modal-content').innerHTML =
+    '<div class="modal-top">' +
+      '<div class="modal-poster">' +
+        (poster
+          ? '<img src="' + poster + '" alt="' + esc(title) + '">'
+          : '<div class="modal-poster-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 8h10M7 12h6"/></svg></div>') +
+      '</div>' +
+      '<div class="modal-hero">' +
+        '<span class="modal-type-badge badge-movie">Film</span>' +
+        '<div class="modal-title">' + esc(title) + '</div>' +
+        '<div class="modal-meta">' +
+          (rating ? '<span class="modal-rating">★ ' + rating + '</span>' : '') +
+          (fullDate ? '<span>' + fullDate + '</span>' : year ? '<span>' + year + '</span>' : '') +
+          (runtime ? '<span>' + runtime + ' min</span>' : '') +
+        '</div>' +
+        (tagline ? '<div class="modal-tagline">"' + esc(tagline) + '"</div>' : '') +
+        trailerBtn(detail) +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-body">' +
+      trailerEmbed(detail) +
+      watchHTML(detail) +
+      '<div class="modal-overview">' + esc(overview) + '</div>' +
+      (genres.length ? '<div class="modal-genres">' + genres.map((g) => '<span class="modal-genre-tag">' + esc(g) + '</span>').join('') + '</div>' : '') +
+      '<div class="modal-credits">' +
+        (director ? '<div class="modal-credit-block"><span class="modal-credit-label">Director</span><span class="modal-credit-value">' + esc(director) + '</span></div>' : '') +
+        (writers ? '<div class="modal-credit-block"><span class="modal-credit-label">Writer' + (writers.includes(',') ? 's' : '') + '</span><span class="modal-credit-value">' + esc(writers) + '</span></div>' : '') +
+        (starring ? '<div class="modal-credit-block" style="grid-column:1/-1"><span class="modal-credit-label">Starring</span><span class="modal-credit-value">' + esc(starring) + '</span></div>' : '') +
+      '</div>' +
+      '<div class="modal-links">' +
+        '<a class="modal-link link-tmdb" href="' + tmdbUrl + '" target="_blank" rel="noopener">↗ TMDB</a>' +
+        (imdbUrl ? '<a class="modal-link link-imdb" href="' + imdbUrl + '" target="_blank" rel="noopener">↗ IMDb</a>' : '') +
+        '<a class="modal-link link-google" href="' + googleUrl + '" target="_blank" rel="noopener">↗ Google</a>' +
+      '</div>' +
+    '</div>';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  stopTrailer();
+  try {
+    if (window.location.hash) window.history.pushState({}, '', window.location.pathname);
+  } catch (_) {}
+}
+
+window.addEventListener('popstate', () => {
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay.classList.contains('open')) {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+    stopTrailer();
+  }
+  checkUrlForModal();
+});
+window.addEventListener('hashchange', checkUrlForModal);
+
+function checkUrlForModal() {
+  const t = (window.location.hash || '').replace(/^#/, '');
+  if (!t) return;
+  const match = t.match(/movie-(\d+)$/);
+  if (!match) return;
+  const id = parseInt(match[1], 10);
+  const item = items.find((i) => i.id === id);
+  if (item) openModal(item);
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+/* ── Back to top ── */
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('back-to-top');
+  if (!btn) return;
+  if (window.scrollY > 400) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+}, { passive: true });
+
+/* ── Init ── */
+tabs(document.getElementById('genres'), GENRES, genre, (v) => { genre = v; load(); });
+tabs(document.getElementById('decades'), DECADES, decade, (v) => { decade = v; load(); });
 load();
 </script>
 </body>
