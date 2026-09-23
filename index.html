@@ -730,6 +730,37 @@
       line-height: 1;
     }
 
+    /* Companion to the Live Top 100, sitting beside it rather than in a menu.
+       Deliberately small: it is a side door, not a second headline. */
+    .alltime-link {
+      font-family: "DM Sans", sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      vertical-align: middle;
+      margin-left: 14px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .alltime-link:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    @media (max-width: 640px) {
+      .alltime-link {
+        font-size: 11px;
+        margin-left: 10px;
+        padding: 3px 8px;
+      }
+    }
 
     .section-title em {
       color: var(--accent);
@@ -3737,6 +3768,7 @@
   <div class="section-header" id="section-header" style="display: none">
     <div class="section-title">
       <span id="section-title-text"><em>Live</em> Top 100</span>
+      <a class="alltime-link" href="/all-time.html" title="The best rated films of all time, by genre and decade">All Time &rarr;</a>
       <button id="sync-badge-btn" class="sync-badge-chip" onclick="openSyncModal()"
         title="Sync watchlist across devices" style="display: none">
         Sync my list to other devices
