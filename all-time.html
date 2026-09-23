@@ -216,6 +216,29 @@
   .card-dl.fail { color: #ff5252; border-color: #ff5252; }
   @media (hover: none) { .card-dl { opacity: 1; } }
 
+  /* Season picker the download button opens on TV cards. */
+  .card-seasons {
+    position: absolute; inset: auto 6px 6px 6px; z-index: 6;
+    background: rgba(10,10,12,.96); border: 1px solid rgba(255,255,255,.15);
+    border-radius: 8px; padding: 10px; color: #fff; font-size: 12px;
+    cursor: default; max-height: 85%; overflow: auto;
+  }
+  .card-seasons .cs-title { font-weight: 600; margin-bottom: 8px; }
+  .card-seasons .cs-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .card-seasons label {
+    display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 999px; cursor: pointer;
+  }
+  .card-seasons label:has(input:checked) { background: #2196f3; border-color: #2196f3; }
+  .card-seasons input { margin: 0; width: 12px; height: 12px; }
+  .card-seasons .cs-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .card-seasons .cs-row button {
+    font: inherit; font-size: 12px; padding: 5px 9px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.25); background: transparent; color: #fff; cursor: pointer;
+  }
+  .card-seasons .cs-go { background: #2196f3; border-color: #2196f3; }
+  .card-seasons .cs-x { margin-left: auto; }
+
   /* ── Modal ── */
   #modal-overlay {
     display: none; position: fixed; inset: 0;
@@ -377,6 +400,7 @@
 </div>
 
 <div class="filters">
+  <div class="filter-row"><span class="label">Type</span><div class="tab-group" id="types"></div></div>
   <div class="filter-row"><span class="label">Genre</span><div class="tab-group" id="genres"></div></div>
   <div class="filter-row"><span class="label">Decade</span><div class="tab-group" id="decades"></div></div>
 </div>
@@ -403,10 +427,12 @@ const TMDB = '/api/tmdb';
 const IMG = 'https://image.tmdb.org/t/p/w342';
 const HOME_DL = 'https://download.ephix.net';
 const GENRE_MAP = {
-  28:'Action', 10759:'Action & Adventure', 12:'Adventure', 16:'Animation',
+  28:'Action', 10759:'Action & Adv', 12:'Adventure', 16:'Animation',
   35:'Comedy', 80:'Crime', 99:'Documentary', 18:'Drama', 10751:'Family',
   14:'Fantasy', 36:'History', 27:'Horror', 9648:'Mystery', 10749:'Romance',
   878:'Sci-Fi', 53:'Thriller', 10752:'War', 37:'Western',
+  10762:'Kids', 10763:'News', 10764:'Reality', 10765:'Sci-Fi & Fantasy',
+  10766:'Soap', 10767:'Talk', 10768:'War & Politics',
 };
 
 function esc(s) {
@@ -414,17 +440,25 @@ function esc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const GENRES = [
+const TYPES = [['movie', 'Film'], ['tv', 'TV']];
+const GENRES_MOVIE = [
   ['', 'All'], ['28','Action'], ['12','Adventure'], ['16','Animation'], ['35','Comedy'],
   ['80','Crime'], ['99','Documentary'], ['18','Drama'], ['10751','Family'], ['14','Fantasy'],
   ['36','History'], ['27','Horror'], ['9648','Mystery'], ['10749','Romance'],
   ['878','Sci-Fi'], ['53','Thriller'], ['10752','War'], ['37','Western'],
+];
+const GENRES_TV = [
+  ['', 'All'], ['10759','Action & Adv'], ['16','Animation'], ['35','Comedy'],
+  ['80','Crime'], ['99','Documentary'], ['18','Drama'], ['10751','Family'],
+  ['10762','Kids'], ['9648','Mystery'], ['10765','Sci-Fi & Fantasy'],
+  ['10768','War & Politics'], ['37','Western'],
 ];
 const DECADES = [
   ['', 'ALL'], ['2020','2020s'], ['2010','2010s'], ['2000','2000s'], ['1990','1990s'],
   ['1980','1980s'], ['1970','1970s'], ['1960','1960s'], ['1950','1950s'], ['1930','PRE-1950'],
 ];
 
+let mediaType = 'movie';
 let genre = '';
 let decade = '';
 let items = [];
@@ -444,7 +478,15 @@ const imgObserver = new IntersectionObserver(
   { rootMargin: '600px 0px' },
 );
 
+// TV vote counts run well below film, so it needs its own, lower floors.
 function minVotes(d) {
+  if (mediaType === 'tv') {
+    if (!d) return 2000;
+    const y = +d;
+    if (y >= 2000) return 800;
+    if (y >= 1980) return 300;
+    return 100;
+  }
   if (!d) return 5000;
   const y = +d;
   if (y >= 2000) return 800;
@@ -468,20 +510,23 @@ function tabs(el, list, current, onPick) {
 }
 
 function query(page, votes) {
+  const dateField = mediaType === 'tv' ? 'first_air_date' : 'primary_release_date';
   const p = new URLSearchParams({
-    path: 'discover/movie',
+    path: 'discover/' + mediaType,
     sort_by: 'vote_average.desc',
     'vote_count.gte': String(votes),
-    'with_runtime.gte': '70',
     include_adult: 'false',
     language: 'en-US',
     page: String(page),
   });
+  // Runtime floor drops film shorts, but on TV it filters by episode length and
+  // guts the list (episode_run_time is patchy), so it is film-only.
+  if (mediaType === 'movie') p.set('with_runtime.gte', '70');
   if (genre) p.set('with_genres', genre);
   if (decade) {
     const end = decade === '1930' ? 1949 : (+decade + 9);
-    p.set('primary_release_date.gte', decade + '-01-01');
-    p.set('primary_release_date.lte', end + '-12-31');
+    p.set(dateField + '.gte', decade + '-01-01');
+    p.set(dateField + '.lte', end + '-12-31');
   }
   return TMDB + '?' + p.toString();
 }
@@ -524,8 +569,8 @@ function buildCard(item, idx) {
   card.appendChild(rankEl);
 
   const badge = document.createElement('div');
-  badge.className = 'card-type-badge badge-movie';
-  badge.textContent = 'Film';
+  badge.className = 'card-type-badge ' + (mediaType === 'movie' ? 'badge-movie' : 'badge-tv');
+  badge.textContent = mediaType === 'movie' ? 'Film' : 'TV';
   card.appendChild(badge);
 
   const info = document.createElement('div');
@@ -578,14 +623,15 @@ async function load() {
       document.getElementById('msg').textContent = 'Nothing matched that combination. Try a wider decade, or all genres.';
       return;
     }
+    const noun = mediaType === 'tv' ? 'shows' : 'films';
     document.getElementById('msg').textContent =
-      items.length + ' films · rated by at least ' + used.toLocaleString() + ' voters'
+      items.length + ' ' + noun + ' · rated by at least ' + used.toLocaleString() + ' voters'
       + (used < start ? ' · relaxed, this combination is thin' : '');
     document.getElementById('count-badge').textContent =
       items.length + ' title' + (items.length !== 1 ? 's' : '');
 
     items.forEach((item, i) => {
-      item.media_type = 'movie';
+      item.media_type = mediaType;
       grid.appendChild(buildCard(item, i));
     });
     if (homeDl) addButtons();
@@ -613,56 +659,109 @@ function addButtons() {
     b.type = 'button';
     b.textContent = '⬇';
     b.title = 'Download at home';
-    b.onclick = (e) => { e.stopPropagation(); grab(it, b); };
+    b.onclick = (e) => { e.stopPropagation(); homeDownload(it, b); };
     el.appendChild(b);
   });
 }
 
-async function grab(it, btn) {
+// Films add straight away. TV opens a season picker first (latest season
+// pre-selected) so a tap on a long-running show never pulls every season.
+function homeDownload(item, btn) {
+  if (item.media_type === 'tv') return homeSeasonPicker(item, btn);
+  return homeAdd(item, btn, { mode: 'all' });
+}
+
+async function homeAdd(item, btn, opts) {
+  const title = item.title || item.name || '';
+  const year = (item.release_date || item.first_air_date || '').slice(0, 4);
   btn.disabled = true; btn.textContent = '…'; btn.title = 'Adding at home…';
   try {
     const r = await fetch(HOME_DL + '/api/add', {
       method: 'POST', credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'movie', tmdbId: it.id, title: it.title, year: (it.release_date || '').slice(0, 4) }),
+      body: JSON.stringify(Object.assign({ type: item.media_type, tmdbId: item.id, title, year }, opts)),
     }).then((x) => x.json());
     if (r.error) throw new Error(r.error);
     btn.classList.add('done');
     btn.textContent = r.queued ? '⏳' : '✓';
+    const what = opts.mode === 'seasons' ? ' (S' + opts.seasons.join(', S') + ' + new episodes)'
+      : opts.mode === 'future' ? ' (new episodes only)'
+      : opts.mode === 'all' && item.media_type === 'tv' ? ' (all seasons)' : '';
     btn.title = r.queued ? 'Queued, home is offline, it will add when back'
-      : r.already ? 'Already in the library at home' : 'Added at home, downloading';
+      : r.already ? 'Already in the library at home' : 'Added at home, downloading' + what;
   } catch (e) {
     btn.disabled = false; btn.textContent = '✗'; btn.classList.add('fail');
     btn.title = "Couldn't add: " + (e.message || e) + '. Click to open download.ephix.net';
-    btn.onclick = (ev) => { ev.stopPropagation(); window.open(HOME_DL + '/?add=movie:' + it.id, '_blank'); };
+    btn.onclick = (ev) => { ev.stopPropagation(); window.open(HOME_DL + '/?add=' + item.media_type + ':' + item.id, '_blank'); };
   }
+}
+
+async function homeSeasonPicker(item, btn) {
+  const card = btn.closest('.card');
+  const existing = card.querySelector('.card-seasons');
+  if (existing) existing.remove();
+  btn.disabled = true; btn.textContent = '…';
+  let info;
+  try {
+    info = await fetch(HOME_DL + '/api/seasons?tmdbId=' + item.id, { credentials: 'include' }).then((x) => x.json());
+    if (info.error) throw new Error(info.error);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '✗'; btn.classList.add('fail');
+    btn.title = "Couldn't load seasons: " + (e.message || e);
+    return;
+  }
+  btn.disabled = false; btn.textContent = '⬇';
+  if (info.inLibrary) { btn.classList.add('done'); btn.textContent = '✓'; btn.title = 'Already in the library at home'; return; }
+  const last = info.seasons[info.seasons.length - 1];
+  const pop = document.createElement('div');
+  pop.className = 'card-seasons';
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  pop.innerHTML =
+    '<div class="cs-title">' + esc(info.title) + ' — which seasons?</div>' +
+    '<div class="cs-list">' + info.seasons.map((n) =>
+      '<label><input type="checkbox" value="' + n + '"' + (n === last ? ' checked' : '') + '>S' + String(n).padStart(2, '0') + '</label>').join('') + '</div>' +
+    '<div class="cs-row"><button class="cs-go">Add selected</button><button class="cs-new">New episodes only</button><button class="cs-all">All ' + info.seasons.length + '</button><button class="cs-x" aria-label="Close">×</button></div>';
+  const close = () => pop.remove();
+  pop.querySelector('.cs-x').onclick = close;
+  pop.querySelector('.cs-go').onclick = () => {
+    const picked = [...pop.querySelectorAll('input:checked')].map((i) => Number(i.value));
+    if (!picked.length) return;
+    close(); homeAdd(item, btn, { mode: 'seasons', seasons: picked });
+  };
+  pop.querySelector('.cs-new').onclick = () => { close(); homeAdd(item, btn, { mode: 'future' }); };
+  pop.querySelector('.cs-all').onclick = () => {
+    if (confirm('Add all ' + info.seasons.length + ' seasons of ' + info.title + '?')) { close(); homeAdd(item, btn, { mode: 'all' }); }
+  };
+  card.appendChild(pop);
 }
 
 /* ── Modal ── */
 async function openModal(item) {
   const overlay = document.getElementById('modal-overlay');
   const modalContent = document.getElementById('modal-content');
+  const type = item.media_type;
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
   try {
-    const slug = String(item.title || '').toLowerCase().normalize('NFKD')
+    const slug = String(item.title || item.name || '').toLowerCase().normalize('NFKD')
       .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-    const newUrl = window.location.pathname + '#' + (slug ? slug + '-' : '') + 'movie-' + item.id;
-    window.history.pushState({ modal: true, id: item.id, type: 'movie' }, '', newUrl);
+    const newUrl = window.location.pathname + '#' + (slug ? slug + '-' : '') + type + '-' + item.id;
+    window.history.pushState({ modal: true, id: item.id, type }, '', newUrl);
   } catch (_) {}
 
   modalContent.innerHTML = '<div class="modal-loading"><div class="modal-spinner"></div>Loading details…</div>';
-  const cacheKey = 'movie_' + item.id;
+  const cacheKey = type + '_' + item.id;
   let detail, credits;
   try {
     if (detailCache[cacheKey]) {
       ({ detail, credits } = detailCache[cacheKey]);
     } else {
+      const append = type === 'tv' ? '&append_to_response=videos,external_ids' : '&append_to_response=videos';
       const [d, c, w] = await Promise.all([
-        fetch(TMDB + '?path=movie/' + item.id + '&append_to_response=videos').then((r) => r.json()),
-        fetch(TMDB + '?path=movie/' + item.id + '/credits').then((r) => r.json()),
-        fetch(TMDB + '?path=movie/' + item.id + '/watch/providers').then((r) => r.json()).catch(() => null),
+        fetch(TMDB + '?path=' + type + '/' + item.id + append).then((r) => r.json()),
+        fetch(TMDB + '?path=' + type + '/' + item.id + '/credits').then((r) => r.json()),
+        fetch(TMDB + '?path=' + type + '/' + item.id + '/watch/providers').then((r) => r.json()).catch(() => null),
       ]);
       detail = d; credits = c;
       if (detail) detail._watch = w;
@@ -745,26 +844,29 @@ function stopTrailer() {
 }
 
 function renderModal(item, detail, credits) {
-  const title = detail.title || item.title || 'Untitled';
+  const type = item.media_type;
+  const isTv = type === 'tv';
+  const title = detail.title || detail.name || item.title || item.name || 'Untitled';
   const tagline = detail.tagline || '';
   const overview = detail.overview || 'No synopsis available.';
-  const rawDate = detail.release_date || '';
+  const rawDate = detail.release_date || detail.first_air_date || '';
   const year = rawDate.slice(0, 4);
   const fullDate = rawDate ? (() => {
     const d = new Date(rawDate);
     return isNaN(d.getTime()) ? rawDate : d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
   })() : null;
   const rating = detail.vote_average ? detail.vote_average.toFixed(1) : null;
-  const runtime = detail.runtime;
+  const runtime = detail.runtime || (detail.episode_run_time && detail.episode_run_time[0]);
   const poster = detail.poster_path ? 'https://image.tmdb.org/t/p/w500' + detail.poster_path : null;
-  const imdbId = detail.imdb_id;
+  const imdbId = detail.imdb_id || (detail.external_ids && detail.external_ids.imdb_id);
   const genres = (detail.genres || []).map((g) => g.name);
-  const director = (credits.crew || []).filter((c) => c.job === 'Director').map((c) => c.name).slice(0, 3).join(', ');
-  const writers = (credits.crew || []).filter((c) => c.department === 'Writing').map((c) => c.name).slice(0, 3).join(', ');
+  const director = isTv ? '' : (credits.crew || []).filter((c) => c.job === 'Director').map((c) => c.name).slice(0, 3).join(', ');
+  const writers = isTv ? '' : (credits.crew || []).filter((c) => c.department === 'Writing').map((c) => c.name).slice(0, 3).join(', ');
+  const creators = isTv ? (detail.created_by || []).map((c) => c.name).slice(0, 3).join(', ') : '';
   const starring = (credits.cast || []).slice(0, 5).map((c) => c.name).join(', ');
-  const tmdbUrl = 'https://www.themoviedb.org/movie/' + item.id;
+  const tmdbUrl = 'https://www.themoviedb.org/' + type + '/' + item.id;
   const imdbUrl = imdbId ? 'https://www.imdb.com/title/' + imdbId : null;
-  const googleUrl = 'https://www.google.com/search?q=' + encodeURIComponent(title + ' ' + (year || '') + ' movie');
+  const googleUrl = 'https://www.google.com/search?q=' + encodeURIComponent(title + ' ' + (year || '') + (isTv ? ' tv series' : ' movie'));
 
   document.getElementById('modal-content').innerHTML =
     '<div class="modal-top">' +
@@ -774,7 +876,7 @@ function renderModal(item, detail, credits) {
           : '<div class="modal-poster-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 8h10M7 12h6"/></svg></div>') +
       '</div>' +
       '<div class="modal-hero">' +
-        '<span class="modal-type-badge badge-movie">Film</span>' +
+        '<span class="modal-type-badge ' + (isTv ? 'badge-tv' : 'badge-movie') + '">' + (isTv ? 'TV Series' : 'Film') + '</span>' +
         '<div class="modal-title">' + esc(title) + '</div>' +
         '<div class="modal-meta">' +
           (rating ? '<span class="modal-rating">★ ' + rating + '</span>' : '') +
@@ -793,6 +895,7 @@ function renderModal(item, detail, credits) {
       '<div class="modal-credits">' +
         (director ? '<div class="modal-credit-block"><span class="modal-credit-label">Director</span><span class="modal-credit-value">' + esc(director) + '</span></div>' : '') +
         (writers ? '<div class="modal-credit-block"><span class="modal-credit-label">Writer' + (writers.includes(',') ? 's' : '') + '</span><span class="modal-credit-value">' + esc(writers) + '</span></div>' : '') +
+        (creators ? '<div class="modal-credit-block"><span class="modal-credit-label">Creator' + (creators.includes(',') ? 's' : '') + '</span><span class="modal-credit-value">' + esc(creators) + '</span></div>' : '') +
         (starring ? '<div class="modal-credit-block" style="grid-column:1/-1"><span class="modal-credit-label">Starring</span><span class="modal-credit-value">' + esc(starring) + '</span></div>' : '') +
       '</div>' +
       '<div class="modal-links">' +
@@ -826,9 +929,9 @@ window.addEventListener('hashchange', checkUrlForModal);
 function checkUrlForModal() {
   const t = (window.location.hash || '').replace(/^#/, '');
   if (!t) return;
-  const match = t.match(/movie-(\d+)$/);
+  const match = t.match(/(movie|tv)-(\d+)$/);
   if (!match) return;
-  const id = parseInt(match[1], 10);
+  const id = parseInt(match[2], 10);
   const item = items.find((i) => i.id === id);
   if (item) openModal(item);
 }
@@ -845,7 +948,21 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ── Init ── */
-tabs(document.getElementById('genres'), GENRES, genre, (v) => { genre = v; load(); });
+// Genre IDs differ between film and TV, so switching type rebuilds the genre
+// row and resets the selection to All.
+function renderGenreTabs() {
+  const el = document.getElementById('genres');
+  el.innerHTML = '';
+  tabs(el, mediaType === 'tv' ? GENRES_TV : GENRES_MOVIE, genre, (v) => { genre = v; load(); });
+}
+
+tabs(document.getElementById('types'), TYPES, mediaType, (v) => {
+  mediaType = v;
+  genre = '';
+  renderGenreTabs();
+  load();
+});
+renderGenreTabs();
 tabs(document.getElementById('decades'), DECADES, decade, (v) => { decade = v; load(); });
 load();
 </script>
