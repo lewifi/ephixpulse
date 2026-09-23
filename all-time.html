@@ -223,6 +223,19 @@ let decade = '';
 let items = [];
 let homeDl = false;
 
+const imgObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.src = e.target.dataset.src;
+        delete e.target.dataset.src;
+        imgObserver.unobserve(e.target);
+      }
+    });
+  },
+  { rootMargin: '600px 0px' },
+);
+
 // TMDB vote counts skew hard towards recent films, so one fixed floor would bury
 // everything made before about 1990. Across all decades the floor has to be high:
 // below roughly 5,000 votes a film released weeks ago outranks The Godfather,
@@ -272,7 +285,7 @@ function query(page, votes) {
 function card(it, i) {
   const year = (it.release_date || '').slice(0, 4);
   const art = it.poster_path
-    ? '<img src="' + IMG + it.poster_path + '" alt="" loading="lazy">'
+    ? '<img data-src="' + IMG + it.poster_path + '" alt="">'
     : '<div class="noimg">' + esc(it.title) + '</div>';
   return '<div class="card" data-id="' + it.id + '">' + art
     + '<div class="card-overlay"></div>'
@@ -315,7 +328,9 @@ async function load() {
     $('#msg-sub').textContent = label + ' · ' + dlabel;
     $('#msg').textContent = items.length + ' films · rated by at least ' + used.toLocaleString() + ' voters'
       + (used < start ? ' · relaxed, this combination is thin' : '');
+    imgObserver.disconnect();
     $('#grid').innerHTML = items.map(card).join('');
+    $('#grid').querySelectorAll('img[data-src]').forEach((img) => imgObserver.observe(img));
     if (homeDl) addButtons();
   } catch (e) {
     $('#msg').innerHTML = '<span style="color:var(--accent2)">Could not load: ' + esc(e.message || e) + '</span>';
