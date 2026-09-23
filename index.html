@@ -731,34 +731,27 @@
     }
 
     /* Companion to the Live Top 100, sitting beside it rather than in a menu.
-       Deliberately small: it is a side door, not a second headline. */
+       Same headline typeface at half height, sharing the title's baseline. */
     .alltime-link {
-      font-family: "DM Sans", sans-serif;
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(16px, 2.5vw, 32px);
+      letter-spacing: 0.04em;
+      line-height: 1;
       color: var(--muted);
       text-decoration: none;
-      vertical-align: middle;
-      margin-left: 14px;
-      padding: 4px 10px;
-      border: 1px solid var(--border);
-      border-radius: 3px;
+      vertical-align: baseline;
+      margin-left: 16px;
       white-space: nowrap;
-      transition: all 0.2s ease;
+      transition: color 0.2s ease;
     }
 
     .alltime-link:hover {
       color: var(--accent);
-      border-color: var(--accent);
     }
 
     @media (max-width: 640px) {
       .alltime-link {
-        font-size: 11px;
         margin-left: 10px;
-        padding: 3px 8px;
       }
     }
 
